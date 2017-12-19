@@ -90,6 +90,35 @@ class TestAccounting_l10n_fr(AccountingTestCase):
     user = uf.getUser(self.username).__of__(uf)
     newSecurityManager(None, user)
 
+  def _getReportXMLTreeFromEmail(self):
+    fec_xml = ''
+    last_message = self.portal.MailHost._last_message
+    self.assertNotEquals((), last_message)
+    mfrom, mto, message_text = last_message
+    self.assertEqual('"%s" <%s>' % (self.first_name, self.recipient_email_address), mto[0])
+    mail_message = email.message_from_string(message_text)
+    for part in mail_message.walk():
+      content_type = part.get_content_type()
+      file_name = part.get_filename()
+      if file_name == 'FEC-2014.zip':
+        self.assertEqual('application/zip', content_type)
+        data = part.get_payload(decode=True)
+        zf = zipfile.ZipFile(StringIO(data))
+        fec_xml = zf.open("FEC.xml").read()
+        break
+    else:
+      self.fail("Attachment not found")
+
+    # validate against official schema
+    schema = etree.XMLSchema(etree.XML(open(os.path.join(
+        os.path.dirname(__file__), 'test_data',
+        'formatA47A-I-VII-1.xsd')).read()))
+
+    # this raise if invalid
+    tree = etree.fromstring(fec_xml, etree.XMLParser(schema=schema))
+
+    return tree
+
   def test_FEC(self):
     account_module = self.portal.account_module
     first = self._makeOne(
@@ -120,38 +149,15 @@ class TestAccounting_l10n_fr(AccountingTestCase):
                      dict(source_value=account_module.goods_sales,
                           source_credit=200.00)))
 
-    self.portal.accounting_module.AccountingTransactionModule_viewFrenchAccountingTransactionFile(
+    self.portal.accounting_module.AccountingTransactionModule_viewFrenchAccountingTransactionFileExtended(
         section_category='group/demo_group',
         section_category_strict=False,
         at_date=DateTime(2014, 12, 31),
         simulation_state=['delivered'])
     self.tic()
 
-    fec_xml = ''
-    last_message = self.portal.MailHost._last_message
-    self.assertNotEquals((), last_message)
-    mfrom, mto, message_text = last_message
-    self.assertEqual('"%s" <%s>' % (self.first_name, self.recipient_email_address), mto[0])
-    mail_message = email.message_from_string(message_text)
-    for part in mail_message.walk():
-      content_type = part.get_content_type()
-      file_name = part.get_filename()
-      if file_name == 'FEC-2014.zip':
-        self.assertEqual('application/zip', content_type)
-        data = part.get_payload(decode=True)
-        zf = zipfile.ZipFile(StringIO(data))
-        fec_xml = zf.open("FEC.xml").read()
-        break
-    else:
-      self.fail("Attachment not found")
-
-    # validate against official schema
-    schema = etree.XMLSchema(etree.XML(open(os.path.join(
-        os.path.dirname(__file__), 'test_data',
-        'formatA47A-I-VII-1.xsd')).read()))
-
     # this raise if invalid
-    tree = etree.fromstring(fec_xml, etree.XMLParser(schema=schema))
+    tree = self._getReportXMLTreeFromEmail()
 
     debit_list = tree.xpath("//Debit")
     self.assertEqual(6, len(debit_list))
@@ -210,7 +216,7 @@ class TestAccounting_l10n_fr(AccountingTestCase):
                           source_credit=148.00)))
     self.tic()
 
-    self.portal.accounting_module.AccountingTransactionModule_viewFrenchAccountingTransactionFile(
+    self.portal.accounting_module.AccountingTransactionModule_viewFrenchAccountingTransactionFileExtended(
         section_category='group/demo_group',
         section_category_strict=False,
         at_date=DateTime(2014, 12, 31),
@@ -218,33 +224,7 @@ class TestAccounting_l10n_fr(AccountingTestCase):
         ledger=ledger_list)
     self.tic()
 
-    fec_xml = ''
-    last_message = self.portal.MailHost._last_message
-    self.assertNotEquals((), last_message)
-    mfrom, mto, message_text = last_message
-    self.assertEqual('"%s" <%s>' % (self.first_name, self.recipient_email_address), mto[0])
-    mail_message = email.message_from_string(message_text)
-    for part in mail_message.walk():
-      content_type = part.get_content_type()
-      file_name = part.get_filename()
-      if file_name == 'FEC-2014.zip':
-        self.assertEqual('application/zip', content_type)
-        data = part.get_payload(decode=True)
-        zf = zipfile.ZipFile(StringIO(data))
-        fec_xml = zf.open("FEC.xml").read()
-        break
-    else:
-      self.fail("Attachment not found")
-
-    # validate against official schema
-    schema = etree.XMLSchema(etree.XML(open(os.path.join(
-        os.path.dirname(__file__), 'test_data',
-        'formatA47A-I-VII-1.xsd')).read()))
-
-    # this raise if invalid
-    tree = etree.fromstring(fec_xml, etree.XMLParser(schema=schema))
-
-    return tree
+    return self._getReportXMLTreeFromEmail()
 
   def test_FECWithOneLedger(self):
     tree = self._FECWithLedger(['accounting/general'])
