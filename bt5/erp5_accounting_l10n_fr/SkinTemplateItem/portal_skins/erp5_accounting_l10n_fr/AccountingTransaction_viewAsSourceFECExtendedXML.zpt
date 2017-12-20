@@ -16,9 +16,14 @@
         <CompteAuxNum tal:content="python: third_party.getDestinationReference() or third_party.getSourceReference() or third_party.getReference() or third_party.getId()"></CompteAuxNum>
         <CompteAuxLib tal:content="third_party/getTitle"></CompteAuxLib>
       </tal:block>
-      <Montantdevise tal:content="python: '%0.2f' % (line.getSourceDebit() if line.getQuantity() >= 0 else line.getSourceCredit())"></Montantdevise>
-      <Idevise tal:content="line/getResourceReference">Currency</Idevise>
-      <Montant tal:content="python: '%0.2f' % (line.getSourceAssetDebit() if line.getQuantity() >= 0 else line.getSourceAssetCredit())"></Montant>
+      <tal:block tal:condition="python: context.getSourceSectionValue().getPriceCurrency() != line.getResource()">
+        <Montantdevise tal:content="python: '%0.2f' % (line.getSourceCredit() if line.getQuantity() >= 0 else line.getSourceDebit())"></Montantdevise>
+        <Idevise tal:content="line/getResourceReference">Currency</Idevise>
+        <Montant tal:content="python: '%0.2f' % (line.getSourceAssetCredit() if line.getQuantity() >= 0 else line.getSourceAssetDebit())"></Montant>
+      </tal:block>
+      <tal:block tal:condition="python: context.getSourceSectionValue().getPriceCurrency() == line.getResource()">
+        <Montant tal:content="python: '%0.2f' % (line.getSourceCredit() if line.getQuantity() >= 0 else line.getSourceDebit())"></Montant>
+      </tal:block>
       <Sens tal:content="python: '-1' if line.getQuantity() >= 0 else '+1'"></Sens>
       <tal:block tal:replace="structure line/getDescription"/>
     </ligne></tal:block>

@@ -16,10 +16,15 @@
         <CompteAuxNum tal:content="python: third_party.getDestinationReference() or third_party.getSourceReference() or third_party.getReference() or third_party.getId()"></CompteAuxNum>
         <CompteAuxLib tal:content="third_party/getTitle"></CompteAuxLib>
       </tal:block>
-      <Montantdevise tal:content="python: '%0.2f' % (line.getDestinationDebit() if line.getQuantity() >= 0 else line.getDestinationCredit())"></Montantdevise>
-      <Idevise tal:content="line/getResourceReference">Currency</Idevise>
-      <Montant tal:content="python: '%0.2f' % (line.getDestinationAssetDebit() if line.getQuantity() >= 0 else line.getDestinationAssetCredit())"></Montant>
-      <Sens tal:content="python: '-1' if line.getQuantity() >= 0 else '+1'"></Sens>
+      <tal:block tal:condition="python: context.getDestinationSectionValue().getPriceCurrency() != line.getResource()">
+        <Montantdevise tal:content="python: '%0.2f' % (line.getDestinationDebit() if line.getQuantity() >= 0 else line.getDestinationCredit())"></Montantdevise>
+        <Idevise tal:content="line/getResourceReference">Currency</Idevise>
+        <Montant tal:content="python: '%0.2f' % (line.getDestinationAssetDebit() if line.getQuantity() >= 0 else line.getDestinationAssetCredit())"></Montant>
+      </tal:block>
+      <tal:block tal:condition="python: context.getDestinationSectionValue().getPriceCurrency() == line.getResource()">
+        <Montant tal:content="python: '%0.2f' % (line.getDestinationDebit() if line.getQuantity() >= 0 else line.getDestinationCredit())"></Montant>
+      </tal:block>
+      <Sens tal:content="python: '+1' if line.getQuantity() >= 0 else '-1'"></Sens>
       <tal:block tal:replace="structure line/getDescription"/>
     </ligne></tal:block>
 </ecriture>
