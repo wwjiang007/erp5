@@ -12,12 +12,14 @@
       <CompteNum tal:content="account/Account_getGapId">Reference Compte (Account_getGapId)</CompteNum>
       <CompteLib tal:content="line/Movement_getDestinationCompteLib">Translated Title Compte</CompteLib>
       <tal:block tal:condition="python: account.getAccountType() in ('asset/receivable', 'liability/payable')"
-                 tal:define="third_party line/getSourceSectionValue"><CompteAuxNum tal:content="python: third_party.getDestinationReference() or third_party.getSourceReference() or third_party.getReference() or third_party.getId()"></CompteAuxNum>
-        <CompteAuxLib tal:content="third_party/getTitle"></CompteAuxLib></tal:block><tal:block>
-      <Montantdevise></Montantdevise>
-      <Idevise></Idevise></tal:block>
-      <Debit tal:content="python: '%0.2f' % (line.getDestinationAssetDebit() or line.getDestinationDebit())"></Debit>
-      <Credit tal:content="python: '%0.2f' % (line.getDestinationAssetCredit() or line.getDestinationCredit())"></Credit>
+                 tal:define="third_party line/getSourceSectionValue">
+        <CompteAuxNum tal:content="python: third_party.getDestinationReference() or third_party.getSourceReference() or third_party.getReference() or third_party.getId()"></CompteAuxNum>
+        <CompteAuxLib tal:content="third_party/getTitle"></CompteAuxLib>
+      </tal:block>
+      <Montantdevise tal:content="python: '%0.2f' % (line.getDestinationDebit() if line.getQuantity() >= 0 else line.getDestinationCredit())"></Montantdevise>
+      <Idevise tal:content="line/getResourceReference">Currency</Idevise>
+      <Montant tal:content="python: '%0.2f' % (line.getDestinationAssetDebit() if line.getQuantity() >= 0 else line.getDestinationAssetCredit())"></Montant>
+      <Sens tal:content="python: '-1' if line.getQuantity() else '+1'"></Sens>
       <tal:block tal:replace="structure line/getDescription"/>
     </ligne></tal:block>
 </ecriture>
