@@ -13,10 +13,6 @@ active_process = portal.portal_activities.newActiveProcess()
 priority = 4
 
 #### AccountingTransactionModule_viewFrenchAccountingTransactionFileForPortalType
-#kind = 'portal_type'
-#kind = 'ledger'
-kind = 'portal_type_ledger'
-
 method_kw = {
   'section_uid_list': section_uid_list,
 }
@@ -44,7 +40,7 @@ if ledger is not None:
 
 # (journal_code, journal_lib, search_kw)
 journal_search_kw_list = []
-if kind == 'ledger':
+if group_by == 'ledger':
   if not ledger_obj_list:
     for ledger_relative_url, _ in context.AccountingTransactionModule_getLedgerItemList():
       ledger_obj_list.append(category_tool.ledger.restrictedTraverse(ledger_relative_url))
@@ -55,7 +51,7 @@ if kind == 'ledger':
     ledger_search_kw['default_ledger_uid'] = ledger_obj.getUid()
     journal_search_kw_list.append((ledger_obj.getReference() or ledger_obj.getId(), ledger_obj.getReference() or ledger_obj.getId(), ledger_search_kw))
 
-elif kind == 'portal_type_ledger':
+elif group_by == 'portal_type_ledger':
   if not ledger_obj_list:
     for ledger_relative_url, _ in context.AccountingTransactionModule_getLedgerItemList():
       ledger_obj_list.append(category_tool.ledger.restrictedTraverse(ledger_relative_url))
@@ -71,7 +67,7 @@ elif kind == 'portal_type_ledger':
                                      portal_type_ledger_search_kw))
    
 
-# kind == 'portal_type'
+# group_by == 'portal_type'
 else:
   if ledger_obj_list:
     search_kw['default_ledger_uid'] = [ ledger_obj.getUid() for ledger_obj in ledger_obj_list ]

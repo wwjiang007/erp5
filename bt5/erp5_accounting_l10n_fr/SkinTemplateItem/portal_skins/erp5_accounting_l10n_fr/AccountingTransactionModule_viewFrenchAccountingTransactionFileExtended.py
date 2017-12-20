@@ -22,6 +22,7 @@ context.activate().AccountingTransactionModule_viewFrenchAccountingTransactionFi
   section_category,
   section_category_strict,
   at_date,
+  group_by,
   simulation_state,
   ledger,
   user_name=person_value.Person_getUserId(),
