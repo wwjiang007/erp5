@@ -13,14 +13,11 @@ active_process = portal.portal_activities.newActiveProcess()
 priority = 4
 
 #### AccountingTransactionModule_viewFrenchAccountingTransactionFileForPortalType
-kind = 'portal_type'
+#kind = 'portal_type'
 #kind = 'ledger'
-#kind = 'portal_type_ledger'
+kind = 'portal_type_ledger'
 
-# XXX we need proxy role for that
-this_journal_active_process = portal.portal_activities.newActiveProcess().getRelativeUrl()
 method_kw = {
-  'active_process': this_journal_active_process,
   'section_uid_list': section_uid_list,
 }
 
@@ -56,7 +53,7 @@ if kind == 'ledger':
   for ledger_obj in ledger_obj_list:
     ledger_search_kw = search_kw.copy()
     ledger_search_kw['default_ledger_uid'] = ledger_obj.getUid()
-    journal_search_kw_list.append((ledger_obj.getReference(), ledger_obj.getReference(), ledger_search_kw))
+    journal_search_kw_list.append((ledger_obj.getReference() or ledger_obj.getId(), ledger_obj.getReference() or ledger_obj.getId(), ledger_search_kw))
 
 elif kind == 'portal_type_ledger':
   if not ledger_obj_list:
@@ -64,19 +61,21 @@ elif kind == 'portal_type_ledger':
       ledger_obj_list.append(category_tool.ledger.restrictedTraverse(ledger_relative_url))
 
   for ledger_obj in ledger_obj_list:
-    portal_type_ledger_search_kw = search_kw.copy()
-    portal_type_ledger_search_kw['default_ledger_uid'] = ledger_obj.getUid()    
     for portal_type in portal.getPortalAccountingTransactionTypeList():
+      portal_type_ledger_search_kw = search_kw.copy()
+      portal_type_ledger_search_kw['default_ledger_uid'] = ledger_obj.getUid()
       portal_type_ledger_search_kw['portal_type'] = portal_type
       portal_type_obj = portal.portal_types[portal_type]
-      journal_search_kw_list.append(("%s: %s" % (portal_type.getCompactTranslatedTitle(), ledger_obj.getReference()),
-                                     "%s: %s" % (portal_type.getTranslatedTitle(), ledger_obj.getReference()),
+      journal_search_kw_list.append(("%s: %s" % (portal_type_obj.getCompactTranslatedTitle(), ledger_obj.getReference() or ledger_obj.getId()),
+                                     "%s: %s" % (portal_type_obj.getTranslatedTitle(), ledger_obj.getReference() or ledger_obj.getId()),
                                      portal_type_ledger_search_kw))
+   
 
 # kind == 'portal_type'
 else:
   if ledger_obj_list:
     search_kw['default_ledger_uid'] = [ ledger_obj.getUid() for ledger_obj in ledger_obj_list ]
+
   for portal_type in portal.getPortalAccountingTransactionTypeList():
     portal_type_obj = portal.portal_types[portal_type]
     portal_type_search_kw = search_kw.copy()
@@ -86,6 +85,10 @@ else:
 ## search_kw
 
 for journal_code, journal_lib, search_kw in journal_search_kw_list:
+  # XXX we need proxy role for that
+  this_journal_active_process = portal.portal_activities.newActiveProcess()
+
+  method_kw['active_process'] = this_journal_active_process.getRelativeUrl()
   portal.portal_catalog.searchAndActivate(
     method_id='AccountingTransaction_postFECExtendedResult', 
     method_kw=method_kw,
@@ -99,7 +102,7 @@ for journal_code, journal_lib, search_kw in journal_search_kw_list:
       journal_code,
       journal_lib,
       active_process=active_process.getRelativeUrl(),
-      this_journal_active_process=this_journal_active_process)
+      this_journal_active_process=this_journal_active_process.getRelativeUrl())
 
 #### AccountingTransactionModule_viewFrenchAccountingTransactionFileExtendedForPortalType
 

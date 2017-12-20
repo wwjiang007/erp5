@@ -16,10 +16,10 @@
         <CompteAuxNum tal:content="python: third_party.getDestinationReference() or third_party.getSourceReference() or third_party.getReference() or third_party.getId()"></CompteAuxNum>
         <CompteAuxLib tal:content="third_party/getTitle"></CompteAuxLib>
       </tal:block>
-      <Montantdevise tal:content="python: '%0.2f' % (line.getDestinationDebit() if line.getQuantity() >= 0 else line.getDestinationCredit())"></Montantdevise>
+      <Montantdevise tal:content="python: '%0.2f' % (line.getSourceDebit() if line.getQuantity() >= 0 else line.getSourceCredit())"></Montantdevise>
       <Idevise tal:content="line/getResourceReference">Currency</Idevise>
-      <Montant tal:content="python: '%0.2f' % (line.getDestinationAssetDebit() if line.getQuantity() >= 0 else line.getDestinationAssetCredit())"></Montant>
-      <Sens tal:content="python: '-1' if line.getQuantity() else '+1'"></Sens>
+      <Montant tal:content="python: '%0.2f' % (line.getSourceAssetDebit() if line.getQuantity() >= 0 else line.getSourceAssetCredit())"></Montant>
+      <Sens tal:content="python: '-1' if line.getQuantity() >= 0 else '+1'"></Sens>
       <tal:block tal:replace="structure line/getDescription"/>
     </ligne></tal:block>
 </ecriture>
