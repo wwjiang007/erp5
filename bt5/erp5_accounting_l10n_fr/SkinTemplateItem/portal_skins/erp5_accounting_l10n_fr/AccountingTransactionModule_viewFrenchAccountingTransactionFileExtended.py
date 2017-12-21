@@ -1,9 +1,9 @@
 from Products.ERP5Type.Message import translateString
 portal = context.getPortalObject()
 
-#person_value = portal.portal_membership.getAuthenticatedMember().getUserValue()
+person_value = portal.portal_membership.getAuthenticatedMember().getUserValue()
 #TEST-ONLY
-person_value = portal.person_module.pers
+#person_value = portal.person_module.pers
 if person_value is None:
   portal.changeSkin(None)
   return context.Base_redirect('view', keep_items=dict(
