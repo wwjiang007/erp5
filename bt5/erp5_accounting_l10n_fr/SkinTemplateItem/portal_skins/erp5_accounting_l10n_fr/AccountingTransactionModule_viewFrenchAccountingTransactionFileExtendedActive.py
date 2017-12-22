@@ -42,8 +42,8 @@ if ledger is not None:
 journal_search_kw_list = []
 if group_by == 'ledger':
   if not ledger_obj_list:
-    for ledger_relative_url, _ in context.AccountingTransactionModule_getLedgerItemList():
-      ledger_obj_list.append(category_tool.ledger.restrictedTraverse(ledger_relative_url))
+    for _, ledger_relative_url in context.AccountingTransactionModule_getLedgerItemList():
+      ledger_obj_list.append(category_tool.restrictedTraverse(ledger_relative_url))
 
   search_kw['portal_type'] = portal.getPortalAccountingTransactionTypeList()
   for ledger_obj in ledger_obj_list:
@@ -53,8 +53,8 @@ if group_by == 'ledger':
 
 elif group_by == 'portal_type_ledger':
   if not ledger_obj_list:
-    for ledger_relative_url, _ in context.AccountingTransactionModule_getLedgerItemList():
-      ledger_obj_list.append(category_tool.ledger.restrictedTraverse(ledger_relative_url))
+    for _, ledger_relative_url in context.AccountingTransactionModule_getLedgerItemList():
+      ledger_obj_list.append(category_tool.restrictedTraverse(ledger_relative_url))
 
   for ledger_obj in ledger_obj_list:
     for portal_type in portal.getPortalAccountingTransactionTypeList():
