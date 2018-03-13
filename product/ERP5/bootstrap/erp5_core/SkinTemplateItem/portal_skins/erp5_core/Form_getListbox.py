@@ -1,6 +1,12 @@
-# Return first listbox in a form that is enabled and not hidden
-# Christophe Dumez <christophe@nexedi.com>
-# This script should be used to detect a listbox without having to name it "listbox"
+"""Return first listbox in a form that is enabled and not hidden
+
+This script should be used to detect a listbox without having to name it "listbox".
+
+:param form: {Form} optional Form instance instead of calling this script directly on a Form
+:param form_id: {str} if specified the Script must be called on currently traversed document
+
+Christophe Dumez <christophe@nexedi.com>
+"""
 
 def isListBox(field):
   if field.meta_type == "ListBox":
@@ -11,12 +17,14 @@ def isListBox(field):
       return True
   return False
 
+if form_id is not None:
+  form = getattr(context, form_id)
 
 if form is None:
   form = context
 
 if form.meta_type != 'ERP5 Form':
-  return None
+  raise RuntimeError("Cannot get Listbox field from {!s}! Supported is only ERP5 Form".format(form.meta_type))
 
 if form.has_field('listbox'):
   return form.get_field('listbox')

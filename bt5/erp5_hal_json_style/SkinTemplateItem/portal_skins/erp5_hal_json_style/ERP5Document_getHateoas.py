@@ -8,21 +8,29 @@ In general, it always returns a JSON reponse in HATEOAS format specification.
 :param mode: {str} help to decide what user wants from us "form" | "search" ...
 :param relative_url: an URL of `traversed_document` to operate on (it must have an object_view)
 
-Only in mode == 'search'
+Parameters for mode == 'search'
 :param query: string-serialized Query
 :param select_list: list of strings to select from search result object
 :param limit: tuple(start_index, num_records) which is further passed to list_method BUT not every list_method takes it into account
 :param form_relative_url: {str} relative URL of a form FIELD issuing the search (listbox/relation field...)
                           it can be None in case of special listboxes like List of Modules
                           or relative path like "portal_skins/erp5_ui_test/FooModule_viewFooList/listbox"
+:param form: {str} a bit hackish way of passing form_id. In case of page_template = "form" it will be similar to form_relative_url with
+             the exception that it contains only the form name (e.g. FooModule_viewFooList). In case of dialogs it points to the previous
+             form which is often more important than the dialog form.
 
-Only in mode == 'form'
+
+Parameters for mode == 'form'
 :param form:
 
-Only in mode == 'traverse'
+
+Parameters for mode == 'traverse'
 Traverse renders arbitrary View. It can be a Form or a Script.
 :param relative_url: string, MANDATORY for obtaining the traversed_document. Calling this script directly on an object should be
                      forbidden in code (but it is not now).
+:param query: string, optional, is a remaining from the search on a previous view. Query is used to replace selections.
+              It provides complete information together with listbox configuration so we are able to pass a list of UIDs
+              to methods which require it. This allows dialogs to show selection from previous view.
 
 
 # Form
@@ -223,15 +231,37 @@ def selectKwargsForCallable(func, initial_kwargs, kwargs_dict):
 
   In case the function cannot state required arguments it throws an AttributeError.
   """
-  if not hasattr(func, 'params'):
+
+  if hasattr(func, 'params'):
+    # In case the func is actualy Script (Python) or ERP5 Python Script
+    func_param_list = [tuple(map(lambda x: x.strip(), func_param.split('='))) for func_param in func.params().split(",")]
+
+  elif hasattr(func, "func_args"):
+    # In case the func is an External Method
+    func_param_list = func.func_args
+    if len(func_param_list) > 0 and func_param_list[0] == "self":
+      func_param_list = func_param_list[1:]
+    func_default_list = func.func_defaults
+    func_param_list = [(func_param, func_default_list[i]) if len(func_default_list) >= (i + 1) else (func_param, )
+                        for i, func_param in enumerate(func_param_list)]
+
+  else:
+    # TODO: cover the case of Callables
+    # For anything else give up in advance and just return initial guess of the callee
     return initial_kwargs
 
-  func_param_list = [func_param.strip() for func_param in func.params().split(",")]
-  func_param_name_list = [func_param if '=' not in func_param else func_param.split('=')[0]
-                          for func_param in func_param_list if '*' not in func_param]
+  # func_param_list is a list of tuples - first item is parameter name and optinal second item is the default value
+  func_param_name_list = [item[0] for item in func_param_list]
   for func_param_name in func_param_name_list:
-    if func_param_name in kwargs_dict and func_param_name not in initial_kwargs:
-      initial_kwargs[func_param_name] = kwargs_dict.get(func_param_name)
+    if '*' in func_param_name:
+      continue
+    # move necessary parameters from kwargs_dict to initial_kwargs
+    if func_param_name not in initial_kwargs and func_param_name in kwargs_dict:
+      func_param_value = kwargs_dict.get(func_param_name)
+      if callable(func_param_value):
+        initial_kwargs[func_param_name] = func_param_value()  # evaluate lazy attributes
+      else:
+        initial_kwargs[func_param_name] = func_param_value
   # MIDDLE-DANGEROUS!
   # In case of reports (later even exports) substitute None for unknown
   # parameters. We suppose Python syntax for parameters!
@@ -240,14 +270,21 @@ def selectKwargsForCallable(func, initial_kwargs, kwargs_dict):
   # this way we can mimic synchronous rendering when all form field values
   # were available in `kwargs_dict`. It is obviously wrong behaviour.
   for func_param in func_param_list:
-    if "*" in func_param:
+    if "*" in func_param[0]:
       continue
-    if "=" in func_param:
+    if len(func_param) > 1:  # default value exists
       continue
     # now we have only mandatory parameters
-    func_param = func_param.strip()
+    func_param = func_param[0].strip()
     if func_param not in initial_kwargs:
       initial_kwargs[func_param] = None
+  # If the method does not specify **kwargs we need to remove unwanted parameters
+  if len(func_param_name_list) > 0 and "**" not in func_param_name_list[-1]:
+    initial_param_list = tuple(initial_kwargs.keys()) # copy the keys
+    for initial_param in initial_param_list:
+      if initial_param not in func_param_name_list:
+        del initial_kwargs[initial_param]
+
   return initial_kwargs
 
 
@@ -415,15 +452,24 @@ url_template_dict = {
                        "&relative_url=%(relative_url)s&view=%(view)s&form_id=%(form_id)s",
   "traverse_template": "%(root_url)s/%(script_id)s?mode=traverse" + \
                        "{&relative_url,view}",
+  "worklist_template": "%(root_url)s/%(script_id)s?mode=worklist",
+
+  # Search template will call standard "searchValues" on a document described by `root_url`
   "search_template": "%(root_url)s/%(script_id)s?mode=search" + \
                      "{&query,select_list*,limit*,sort_on*,local_roles*,selection_domain*}",
-  "worklist_template": "%(root_url)s/%(script_id)s?mode=worklist",
+  # Custom search comes with Listboxes where "list_method" is specified. We pass even listbox's
+  # own URL so the search can resolve template fields for proper rendering/formatting/editability
+  # of the results (because they will be backed up with real documents).
   "custom_search_template": "%(root_url)s/%(script_id)s?mode=search" + \
                      "&relative_url=%(relative_url)s" \
                      "&form_relative_url=%(form_relative_url)s" \
                      "&list_method=%(list_method)s" \
+                     "&form=%(form_id)s" \
                      "&default_param_json=%(default_param_json)s" \
                      "{&query,select_list*,limit*,sort_on*,local_roles*,selection_domain*}",
+  # Non-editable searches suppose the search results will be rendered as-is and no template
+  # fields will get involved. Unfortunately, fields need to be resolved because of formatting
+  # all the time so we abandoned this no_editable version
   "custom_search_template_no_editable": "%(root_url)s/%(script_id)s?mode=search" + \
                      "&relative_url=%(relative_url)s" \
                      "&list_method=%(list_method)s" \
@@ -445,6 +491,12 @@ default_document_uri_template = url_template_dict["jio_get_template"]
 Base_translateString = context.getPortalObject().Base_translateString
 
 
+def lazyUidList(traversed_document, listbox, query):
+  """Clojure providing lazy list of UIDs selected from a previous Listbox."""
+  return lambda: [int(getattr(document, "uid"))
+                  for document in traversed_document.Base_searchUsingListbox(listbox, query)]
+
+
 def getRealRelativeUrl(document):
   return '/'.join(portal.portal_url.getRelativeContentPath(document))
 
@@ -462,8 +514,10 @@ def getFormRelativeUrl(form):
 def getFieldDefault(form, field, key, value=None):
   """Get available value for `field` preferably in python-object from REQUEST or from field's default."""
   if value is None:
-    value = (REQUEST.form.get(field.id, REQUEST.form.get(key, None)) or
-             field.get_value('default', request=REQUEST, REQUEST=REQUEST))
+    value = REQUEST.form.get(field.id, REQUEST.form.get(key, MARKER))
+    # use marker because default value can be intentionally empty string
+    if value is MARKER:
+      value = field.get_value('default', request=REQUEST, REQUEST=REQUEST)
     if field.has_value("unicode") and field.get_value("unicode") and isinstance(value, unicode):
       value = unicode(value, form.get_form_encoding())
   if getattr(value, 'translate', None) is not None:
@@ -623,8 +677,14 @@ def renderField(traversed_document, field, form, value=None, meta_type=None, key
       rel_form = getattr(context, listbox_form_name)
       # find listbox field
       listbox_form_field = filter(lambda f: f.getId() == listbox_field_name, rel_form.get_fields())[0]
-      rel_cache = {'form_id': REQUEST.get('form_id', MARKER), 'field_id': REQUEST.get('field_id', MARKER)}
+
+      rel_cache = {
+        'form_id': REQUEST.get('form_id', MARKER),
+        'field_id': REQUEST.get('field_id', MARKER),
+        'relation_form_id': REQUEST.get('relation_form_id', MARKER)
+      }
       REQUEST.set('form_id', rel_form.id)
+      REQUEST.set('relation_form_id', rel_form.id)
       REQUEST.set('field_id', listbox_form_field.id)
 
       # get original definition
@@ -771,22 +831,14 @@ def renderField(traversed_document, field, form, value=None, meta_type=None, key
     # still in the request which is not our case because we do asynchronous rendering
     if list_method is not None:
       selectKwargsForCallable(list_method, list_method_query_dict, REQUEST)
-      # Now if the list_method does not specify **kwargs we need to remove
-      # unwanted parameters like "portal_type" which is everywhere
-      if hasattr(list_method, 'params') and "**" not in list_method.params():
-        _param_key_list = tuple(list_method_query_dict.keys()) # copy the keys
-        for param_key in _param_key_list:
-          if param_key not in list_method.params():  # we search in raw string
-            del list_method_query_dict[param_key]    # but it is enough
-
-    if (True):  # editable_column_list (used to be but we need
-                # template fields resolution (issued by existence of `form_relative_url`)
-                # to always kick in
+    if (True):  # editable_column_list (we need that template fields resolution
+                # (issued by existence of `form_relative_url`) always kicks in
       list_method_custom = url_template_dict["custom_search_template"] % {
         "root_url": site_root.absolute_url(),
         "script_id": script.id,
         "relative_url": traversed_document.getRelativeUrl().replace("/", "%2F"),
         "form_relative_url": "%s/%s" % (getFormRelativeUrl(form), field.id),
+        "form_id": REQUEST.get('form_id', form.id),  # in case of dialogs request.form_id should be already correct
         "list_method": list_method_name,
         "default_param_json": urlsafe_b64encode(
           json.dumps(ensureSerializable(list_method_query_dict)))
@@ -922,7 +974,7 @@ def renderForm(traversed_document, form, response_dict, key_prefix=None, selecti
 
   # Following pop/push of form_id resp. dialog_id is here because of FormBox - an embedded form in a form
   # Fields of forms use form_id in their TALES expressions and obviously FormBox's form_id is different
-  # from its parent's form
+  # from its parent's form. It is very important that we do not remove form_id in case of a Dialog Form.
   if form.pt == "form_dialog":
     previous_request_other['dialog_id'] = REQUEST.other.pop('dialog_id', None)
     REQUEST.set('dialog_id', form.id)
@@ -932,7 +984,6 @@ def renderForm(traversed_document, form, response_dict, key_prefix=None, selecti
 
   field_errors = REQUEST.get('field_errors', {})
 
-  #hardcoded
   include_action = True
   if form.pt == 'form_dialog':
     action_to_call = "Base_callDialogMethod"
@@ -1007,9 +1058,26 @@ def renderForm(traversed_document, form, response_dict, key_prefix=None, selecti
     # some dialog actions (Print Module) use previous selection name
     if REQUEST.get('selection_name', None):
       addHiddenFieldToForm(response_dict, "selection_name", REQUEST.get('selection_name'))
+    # some dialog actions use custom cancel_url
+    if REQUEST.get('cancel_url', None):
+      addHiddenFieldToForm(response_dict, "cancel_url", REQUEST.get('cancel_url'))
+    # Let's support Selections!
+    # There are two things needed - first is to support `uid` parameter of list_function in
+    # a listbox (if present) in this (dialog) form
+    # Second is to pass `uids` or `brain` to a Dialog Form Action Method
+    # We can serialize `uids` into a hidden form field but we cannot do it with brain so we
+    # simply put "query" in a hidden field and construct `brain` from it in Base_callDialogMethod
+    dialog_method_kwargs = selectKwargsForCallable(getattr(traversed_document, form.action), {}, {'brain': None, 'uids': None})
+    if 'uids' in dialog_method_kwargs:
+      # If we do not have "query" in the REQUEST but the Dialog Method requires uids
+      # then we still should inject empty "query" in the dialog call
+      addHiddenFieldToForm(response_dict, "query", query or "")
   else:
     # In form_view we place only form_id in the request form
     addHiddenFieldToForm(response_dict, 'form_id', form.id)
+
+  if REQUEST.get('relation_form_id', None):
+    addHiddenFieldToForm(response_dict, "relation_form_id", REQUEST.get('relation_form_id'))
 
   if (form.pt == 'report_view'):
     # reports are expected to return list of ReportSection which is a wrapper
@@ -1203,6 +1271,7 @@ def calculateHateoas(is_portal=None, is_site_root=None, traversed_document=None,
       is_site_root = False
     except:
       raise NotImplementedError(relative_url)
+
   result_dict = {
     '_debug': mode,
     '_links': {
@@ -1300,7 +1369,6 @@ def calculateHateoas(is_portal=None, is_site_root=None, traversed_document=None,
 
     erp5_action_dict = portal.Base_filterDuplicateActions(
       portal.portal_actions.listFilteredActionsFor(traversed_document))
-
     for erp5_action_key in erp5_action_dict.keys():
       for view_action in erp5_action_dict[erp5_action_key]:
         # Try to embed the form in the result
@@ -1311,6 +1379,16 @@ def calculateHateoas(is_portal=None, is_site_root=None, traversed_document=None,
     # so real form_id of a previous view stays untouched.
     # Here we save previous form_id to `last_form_id` so it does not get overriden by `dialog_id`
     last_form_id =  REQUEST.get('form_id', "") if REQUEST is not None else ""
+    last_listbox = None
+    # So we can do some magic with it! Namely get previous selection (if exists) and deprecated
+    # selection_name which is often required (for e.g. Folder_viewWorkflowActionDialog)
+    try:
+      if last_form_id:
+        last_form = getattr(context, last_form_id)
+        last_listbox = last_form.Form_getListbox()
+    except AttributeError:
+      pass
+
     form_id = ""
     if (embedded_url is not None):
       # XXX Try to fetch the form in the traversed_document of the document
@@ -1339,10 +1417,7 @@ def calculateHateoas(is_portal=None, is_site_root=None, traversed_document=None,
             # often + is used instead of %20 so we replace for space here
             query_param_dict[query_key] = query_value.replace("+", " ")
 
-        # set URL params into REQUEST (just like it was sent by form)
-        for query_key, query_value in query_param_dict.items():
-          REQUEST.set(query_key, query_value)
-        # Embedded Form can be a Script or even a class method thus we mitigate here
+        # If our "form" is actually a Script (nothing is sure in ERP5) then execute it here
         try:
           if "Script" in renderer_form.meta_type:
             # we suppose that the script takes only what is given in the URL params
@@ -1362,6 +1437,18 @@ def calculateHateoas(is_portal=None, is_site_root=None, traversed_document=None,
                status_message = parsed_query.get('portal_status_message')[0]
           return traversed_document.Base_redirect(keep_items={
             'portal_status_message': status_message})
+
+        # In order not to use Selections we need to pass all search attributes to *a listbox inside form dialog*
+        # in case there was a listbox in the previous form. No other case!
+        if getattr(renderer_form, "pt", "") == "form_dialog" and last_form_id and last_listbox:
+        #  If a Lisbox's list_method takes `uid` as input parameter then it will be ready in the request. But the actual
+        # computation is too expensive so we make it lazy (and evaluate any callable at `selectKwargsForCallable`)
+          query_param_dict["uid"] = lazyUidList(traversed_document, last_listbox, query)
+
+        # Request is later used for method's arguments discovery so set URL params into REQUEST (just like it was sent by form)
+        for query_key, query_value in query_param_dict.items():
+          REQUEST.set(query_key, query_value)
+        # Embedded Form can be a Script or even a class method thus we mitigate here
 
         renderForm(traversed_document, renderer_form, embedded_dict)
 
@@ -1395,12 +1482,14 @@ def calculateHateoas(is_portal=None, is_site_root=None, traversed_document=None,
           # XXX This line is only optimization for shorter URL and thus is ugly
           if not (form_id or last_form_id):
             url_template_key = "traverse_generator"
+
           erp5_action_list[-1]['href'] = url_template_dict[url_template_key] % {
                 "root_url": site_root.absolute_url(),
                 "script_id": script.id,
                 "relative_url": traversed_document.getRelativeUrl().replace("/", "%2F"),
                 "view": erp5_action_list[-1]['name'],
-                "form_id": form_id if form_id and renderer_form.pt == "form_view" else last_form_id
+                # add form_id for actions going from module view (form_list) and from document view (form_view)
+                "form_id": form_id if form_id and renderer_form.pt in ("form_view", "form_list") else last_form_id
               }
 
         if erp5_action_key == 'object_jump':
@@ -1543,6 +1632,7 @@ def calculateHateoas(is_portal=None, is_site_root=None, traversed_document=None,
     #  limit: [15, 16]                                (begin_index, num_records)
     #  local_roles: TODO
     #  selection_domain: JSON string: {region: 'foo/bar'}
+    #  form: "Form_someName"                          (for search issued from dialog)
     #
     # Default Param JSON contains
     #  portal_type: list of Portal Types to include (singular form matches the
@@ -1554,6 +1644,10 @@ def calculateHateoas(is_portal=None, is_site_root=None, traversed_document=None,
     #  > Method 'search' is used for getting related objects as well which are
     #  > not backed up by a ListBox thus the value resolution would have to be
     #  > there anyway. It is better to use one code for all in this case.
+    #
+    #  How do you deal with old-style Selections?
+    #  > We simply do not use them. All Document selection is handled via passing
+    #  > "query" parameter to Base_callDialogMethod or introspecting list_methods.
     #################################################
     if REQUEST.other['method'] != "GET":
       response.setStatus(405)
@@ -1561,6 +1655,14 @@ def calculateHateoas(is_portal=None, is_site_root=None, traversed_document=None,
 
     # set 'here' for field rendering which contain TALES expressions
     REQUEST.set('here', traversed_document)
+    # a bit hack-ish (sorry)
+    # search issued from dialog needs previous form_id because often it just
+    # copies the previous search thus we need to pass it and we do not want
+    # to introduce another parameter to getHateos so we reuse `form`
+    # This is needed for example for erp5_core/Folder_viewDeleteDialog/listbox
+    # (see TALES expression for form_id and field_id there)
+    if isinstance(form, str):
+      REQUEST.set('form_id', form)
 
     # in case we have custom list method
     catalog_kw = {}
@@ -1615,7 +1717,7 @@ def calculateHateoas(is_portal=None, is_site_root=None, traversed_document=None,
           elif sort_order.lower().startswith("desc"):
             sort_order = "DESC"
           else:
-            # should raise an ValueError instead
+            # should raise a ValueError instead
             log('Wrong sort order "{}" in {}! It must start with "asc" or "desc"'.format(sort_order, form_relative_url),
                         level=200)  # error
           return (sort_col, sort_order)
@@ -1663,7 +1765,8 @@ def calculateHateoas(is_portal=None, is_site_root=None, traversed_document=None,
       listbox_form = getattr(traversed_document, source_field.aq_parent.id)
 
       # field TALES expression evaluated by Base_getRelatedObjectParameter requires that
-      REQUEST.other['form_id'] = listbox_form.id
+      # REQUEST.other['form_id'] = listbox_form.id
+      # we have to go without that - we touch REQUEST as less as possible
 
       for select in select_list:
         # See Listbox.py getValueList --> getEditableField & getColumnAliasList method

@@ -50,11 +50,11 @@
         </item>
         <item>
             <key> <string>_params</string> </key>
-            <value> <string>dialog_method, dialog_id, form_id, dialog_category=\'\', update_method=None, query=\'\', **kw</string> </value>
+            <value> <string>message, level="error", request=None</string> </value>
         </item>
         <item>
             <key> <string>id</string> </key>
-            <value> <string>Base_callDialogMethod</string> </value>
+            <value> <string>Base_renderMessage</string> </value>
         </item>
       </dictionary>
     </pickle>

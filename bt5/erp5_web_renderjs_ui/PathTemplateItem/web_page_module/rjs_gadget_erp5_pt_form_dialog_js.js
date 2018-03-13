@@ -6,46 +6,32 @@
   function submitDialog(gadget, submit_action_id, is_update_method) {
     var form_gadget = gadget,
       action = form_gadget.state.erp5_document._embedded._view._actions.put,
-      form_id = form_gadget.state.erp5_document._embedded._view.form_id,
-      dialog_id = form_gadget.state.erp5_document._embedded._view.dialog_id,
       redirect_to_parent;
 
-    return form_gadget.notifySubmitting()
+    return gadget.notifySubmitting()
       .push(function () {
-        return form_gadget.getDeclaredGadget("erp5_form");
-      })
-      .push(function (erp5_form) {
-        return erp5_form.getContent();
+        return gadget.getContent();
       })
       .push(function (content_dict) {
-        var data = {},
-          key;
-
-        // In dialog form, dialog_id is mandatory and form_id is optional
-        data.dialog_id = dialog_id['default'];
-        if (form_id !== undefined) {
-          data.form_id = form_id['default'];
-        }
-
-        data.dialog_method = form_gadget.state.form_definition[submit_action_id];
-        if (is_update_method) {
-          data.update_method = data.dialog_method;
-        }
-        //XXX hack for redirect, difined in form
+        //XXX hack for redirect, defined in form
         redirect_to_parent = content_dict.field_your_redirect_to_parent;
-        for (key in content_dict) {
-          if (content_dict.hasOwnProperty(key)) {
-            data[key] = content_dict[key];
-          }
+
+        // ERP5 expects the Action Script name in a field called "dialog_method"
+        // For Update Action - override the default value from "action"
+        content_dict.dialog_method = gadget.state.form_definition[submit_action_id];
+        if (is_update_method) {
+          content_dict.update_method = content_dict.dialog_method;
         }
 
-        return form_gadget.jio_putAttachment(
-          form_gadget.state.jio_key,
-          action.href,
-          data
+        return gadget.jio_putAttachment(
+          gadget.state.jio_key,
+          action.href,  // most likely points to Base_callDialogMethod
+          content_dict
         );
       })
       .push(function (attachment) {
+        // successful JIO call will clear-out failure flag
+        gadget.state.fix = 0;
 
         if (attachment.target.response.type === "application/json") {
           // successful form save returns simple redirect and answer as JSON
@@ -59,7 +45,7 @@
 
               return form_gadget.notifySubmitted({
                 "message": response.portal_status_message,
-                "status": "success"
+                "status": response.portal_status_level || "success"
               });
             })
             .push(function () {
@@ -176,6 +162,8 @@
           });
       })
       .push(undefined, function (error) {
+        /** Fail branch of the JIO call. */
+        gadget.state.fix = 1;  // unsucessful JIO call sets persistent fail flag
         if (error !== undefined && error.target !== undefined) {
           var error_text = 'Encountered an unknown error. Try to resubmit',
             promise_queue = new RSVP.Queue();
@@ -249,6 +237,17 @@
     dialog_button_template = Handlebars.compile(dialog_button_source);
 
   gadget_klass
+    /** Dialogs send&execute actions. Actions can have failures and need
+        confirmation about how to behave. So far we have no possibility
+        of backend asking for a confirmation or modifying frontend state.
+        Therefor we introduce failure-flag state.fix. This flag, if set,
+        is sent together with re-submission of the dialog thus can act as
+        binary yes/no decision for the backend (pressing Cancel equals "No").
+    */
+    .setState({
+      "fix": 0  // failure flag (if == 1 a server failure response was obtained)
+    })
+
     /////////////////////////////////////////////////////////////////
     // acquisition
     /////////////////////////////////////////////////////////////////
@@ -273,12 +272,49 @@
           return declared_gadget.checkValidity();
         });
     }, {mutex: 'changestate'})
+
     .declareMethod('getContent', function () {
+      var gadget = this,
+        form_id = gadget.state.erp5_document._embedded._view.form_id,
+        dialog_id = gadget.state.erp5_document._embedded._view.dialog_id,
+        query = gadget.state.erp5_document._embedded._view.query;
+
       return this.getDeclaredGadget("erp5_form")
-        .push(function (declared_gadget) {
-          return declared_gadget.getContent();
+        .push(function (sub_gadget) {
+          return sub_gadget.getContent();
+        })
+        .push(function (content_dict) {
+          /** Extend form data with (many) dialog-specific items */
+          var data = {},
+            key;
+
+          // create a copy of sub_data so we do not modify them in-place
+          for (key in content_dict) {
+            if (content_dict.hasOwnProperty(key)) {
+              data[key] = content_dict[key];
+            }
+          }
+          // ERP5 expects target Script name in dialog_method field
+          data.dialog_method = gadget.state.form_definition.action;
+
+          // In dialog form, dialog_id is mandatory and form_id is optional
+          data.dialog_id = dialog_id['default'];
+          if (form_id !== undefined) {
+            data.form_id = form_id['default'];
+          }
+          // We pass query to the dialogScript so it has access to the
+          // document's selection from the previous view (using an DB cursor)
+          if (query !== undefined) {
+            data.query = query['default'];
+          }
+          // Send failure flag on resubmit (after a failed submission)
+          if (gadget.state.fix === 1) {
+            data.fix = 1;
+          }
+          return data;
         });
     }, {mutex: 'changestate'})
+
     /////////////////////////////////////////////////////////////////
     // declared methods
     /////////////////////////////////////////////////////////////////

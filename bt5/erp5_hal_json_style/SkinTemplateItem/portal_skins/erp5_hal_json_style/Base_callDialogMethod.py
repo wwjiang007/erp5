@@ -1,20 +1,19 @@
 """
 Generic method called when submitting a form in dialog mode.
 Responsible for validating form data and redirecting to the form action.
+
+Please note that the new UI has deprecated use of Selections. Your scripts
+will no longer receive `selection_name` nor `selection` in their arguments.
 """
 from Products.ERP5Type.Log import log, DEBUG, INFO, WARNING
+from Products.Formulator.Errors import FormValidationError, ValidationError
+from ZTUtils import make_query
 import json
 
-# XXX We should not use meta_type properly,
-# XXX We need to discuss this problem.(yusei)
 def isFieldType(field, type_name):
   if field.meta_type == 'ProxyField':
     field = field.getRecursiveTemplateField()
   return field.meta_type == type_name
-
-from Products.Formulator.Errors import FormValidationError, ValidationError
-from ZTUtils import make_query
-
 
 # Kato: I do not understand why we throw away REQUEST from parameters (hidden in **kw)
 # and use container.REQUEST just to introduce yet another global state. Maybe because
@@ -30,6 +29,19 @@ translate = context.Base_translateString
 
 # Make this script work alike no matter if called by a script or a request
 kw.update(request_form)
+
+# We need to know form_id! In case of a default view the form_id is empty
+# thus we need to parse it out from the default action definition.
+if not form_id:
+  # get default form from default view for given context
+  default_view_url = str(portal.Base_filterDuplicateActions(
+    portal.portal_actions.listFilteredActionsFor(traversed_document))['object_view'][0]['url'])
+  form_id = default_view_url.split('?', 1)[0].split("/")[-1]
+
+#  We do NOT create, use, or modify Selections!
+#  Modify your Scripts instead!
+#  kw['selection_name'] = selection_name
+#  request.set('selection_name', selection_name)
 
 # Exceptions for UI
 if dialog_method == 'Base_configureUI':
@@ -70,11 +82,11 @@ if dialog_method == 'Base_createRelation':
                                      dialog_id=dialog_id,
                                      portal_type=kw['portal_type'],
                                      return_url=kw['cancel_url'])
-# Exception for folder delete
-if dialog_method == 'Folder_delete':
-  return context.Folder_delete(form_id=kw['form_id'],
-                               selection_name=kw['selection_name'],
-                               md5_object_uid_list=kw['md5_object_uid_list'])
+# NO Exception for folder delete
+# if dialog_method == 'Folder_delete':
+#  return context.Folder_delete(form_id=kw['form_id'],
+#                               selection_name=kw['selection_name'],
+#                               md5_object_uid_list=kw['md5_object_uid_list'])
 
 form = getattr(context, dialog_id)
 
@@ -90,7 +102,6 @@ try:
   request.set('editable_mode', 1)
   form.validate_all_to_request(request)
   request.set('editable_mode', editable_mode)
-
   default_skin = context.getPortalObject().portal_skins.getDefaultSkin()
   allowed_styles = ("ODT", "ODS", "Hal", "HalRestricted")
   if getattr(getattr(context, dialog_method), 'pt', None) == "report_view" and \
@@ -161,30 +172,25 @@ if len(listbox_id_list):
     listbox_line_list = tuple(listbox_line_list)
     kw[listbox_id] = request_form[listbox_id] = listbox_line_list
 
+# Handle selection the new way
+# First check for an query in form parameters - if they are there
+# that means previous view was a listbox with selected stuff so recover here
+query = request_form.get("query", None)
+fix = int(request_form.get("fix", "0"))
+if query != "" or (query == "" and fix > 0):  # force empty query when fix == 1
+  listbox = getattr(context, form_id).Form_getListbox()
+  kw['uids'] = [int(getattr(document, "uid"))
+                for document in context.Base_searchUsingListbox(listbox, query)]
+elif query == "" and fix == 0:
+  return context.Base_renderMessage(translate("All documents are selected! Submit again to proceed or Cancel and narrow down your search"), WARNING)
 
-# Check if the selection changed
-if hasattr(kw, 'previous_md5_object_uid_list'):
-  selection_list = context.portal_selections.callSelectionFor(kw['list_selection_name'], context=context)
-  if selection_list is not None:
-    object_uid_list = map(lambda x:x.getObject().getUid(), selection_list)
-    error = context.portal_selections.selectionHasChanged(kw['previous_md5_object_uid_list'], object_uid_list)
-    if error:
-      error_message = context.Base_translateString("Sorry, your selection has changed.")
+# The old way was to set inquire kw for "list_selection_name" and update
+# it with kw["uids"] which means a long URL to call this script
 
 # if dialog_category is object_search, then edit the selection
 if dialog_category == "object_search" :
   context.portal_selections.setSelectionParamsFor(kw['selection_name'], kw)
 
-# if we have checked line in listbox, modify the selection
-listbox_uid = kw.get('listbox_uid', None)
-# In some cases, the listbox exists, is editable, but the selection name
-# has no meaning, for example fast input dialogs.
-# In such cases, we must not try to update a non-existing selection.
-if listbox_uid is not None and kw.has_key('list_selection_name'):
-  uids = kw.get('uids')
-  selected_uids = context.portal_selections.updateSelectionCheckedUidList(
-    kw['list_selection_name'],
-    listbox_uid, uids)
 # Remove empty values for make_query.
 clean_kw = dict((k, v) for k, v in kw.items() if v not in (None, [], ()))
 

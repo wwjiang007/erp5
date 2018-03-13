@@ -11,6 +11,20 @@
     table_template = Handlebars.compile(gadget_klass.__template_element
                          .getElementById("table-template")
                          .innerHTML);
+  /** Add parameters of the function to the link
+  */
+  function addParamToLink(link, params, encode) {
+    var key, query = "";
+    for (key in params) {
+      if (params.hasOwnProperty(key) && params[key] !== undefined && params[key] !== null) {
+        query += "&" + key + "=" + params[key];
+      }
+    }
+    if (encode) {
+      return link + window.encodeURIComponent(query);
+    }
+    return link + query;
+  }
 
   /** Render translated HTML of title + links
    *
@@ -19,15 +33,15 @@
    * @param {Array} command_list - array of links obtained from ERP5 HATEOAS
    */
   function renderLinkList(gadget, title, icon, erp5_link_list) {
-    return new RSVP.Queue()
-      .push(function () {
+    return gadget.getUrlParameter("extended_search")
+      .push(function (query) {
         // obtain RJS links from ERP5 links
         return RSVP.all(
           erp5_link_list.map(function (erp5_link) {
             return gadget.getUrlFor({
               "command": 'change',
               "options": {
-                "view": erp5_link.href,
+                "view": addParamToLink(erp5_link.href, {query: query}),
                 "page": undefined
               }
             });
@@ -62,6 +76,7 @@
     .declareAcquiredMethod("translateHtml", "translateHtml")
     .declareAcquiredMethod("getUrlFor", "getUrlFor")
     .declareAcquiredMethod("updateHeader", "updateHeader")
+    .declareAcquiredMethod("getUrlParameter", "getUrlParameter")
 
     /////////////////////////////////////////////////////////////////
     // declared methods
