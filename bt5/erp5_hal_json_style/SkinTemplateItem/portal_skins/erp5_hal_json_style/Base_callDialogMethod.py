@@ -5,7 +5,7 @@ Responsible for validating form data and redirecting to the form action.
 Please note that the new UI has deprecated use of Selections. Your scripts
 will no longer receive `selection_name` nor `selection` in their arguments.
 """
-from Products.ERP5Type.Log import log, DEBUG, INFO, WARNING
+from Products.ERP5Type.Log import log, DEBUG, INFO, WARNING, ERROR
 from Products.Formulator.Errors import FormValidationError, ValidationError
 from ZTUtils import make_query
 import json
@@ -26,6 +26,7 @@ request = kw.get('REQUEST', None) or container.REQUEST
 request_form = request.form
 error_message = ''
 translate = context.Base_translateString
+portal = context.getPortalObject()
 
 # Make this script work alike no matter if called by a script or a request
 kw.update(request_form)
@@ -35,7 +36,7 @@ kw.update(request_form)
 if not form_id:
   # get default form from default view for given context
   default_view_url = str(portal.Base_filterDuplicateActions(
-    portal.portal_actions.listFilteredActionsFor(traversed_document))['object_view'][0]['url'])
+    portal.portal_actions.listFilteredActionsFor(context))['object_view'][0]['url'])
   form_id = default_view_url.split('?', 1)[0].split("/")[-1]
 
 #  We do NOT create, use, or modify Selections!
@@ -45,24 +46,24 @@ if not form_id:
 
 # Exceptions for UI
 if dialog_method == 'Base_configureUI':
-  return context.Base_configureUI(form_id=kw['form_id'],
+  return context.Base_configureUI(form_id=form_id,
                                   selection_name=kw['selection_name'],
                                   field_columns=kw['field_columns'],
                                   stat_columns=kw['stat_columns'])
 # Exceptions for Sort
 if dialog_method == 'Base_configureSortOn':
-  return context.Base_configureSortOn(form_id=kw['form_id'],
+  return context.Base_configureSortOn(form_id=form_id,
                                       selection_name=kw['selection_name'],
                                       field_sort_on=kw['field_sort_on'],
                                       field_sort_order=kw['field_sort_order'])
 # Exceptions for Workflow
 if dialog_method == 'Workflow_statusModify':
-  return context.Workflow_statusModify(form_id=kw['form_id'],
+  return context.Workflow_statusModify(form_id=form_id,
                                         dialog_id=dialog_id)
 
 # Exception for edit relation
 if dialog_method == 'Base_editRelation':
-  return context.Base_editRelation(form_id=kw['form_id'],
+  return context.Base_editRelation(form_id=form_id,
                                    field_id=kw['field_id'],
                                    selection_name=kw['list_selection_name'],
                                    selection_index=kw['selection_index'],
@@ -72,7 +73,7 @@ if dialog_method == 'Base_editRelation':
 # Exception for create relation
 # Not used in new UI - relation field implemented using JIO calls from JS
 if dialog_method == 'Base_createRelation':
-  return context.Base_createRelation(form_id=kw['form_id'],
+  return context.Base_createRelation(form_id=form_id,
                                      selection_name=kw['list_selection_name'],
                                      selection_index=kw['selection_index'],
                                      base_category=kw['base_category'],
@@ -84,7 +85,7 @@ if dialog_method == 'Base_createRelation':
                                      return_url=kw['cancel_url'])
 # NO Exception for folder delete
 # if dialog_method == 'Folder_delete':
-#  return context.Folder_delete(form_id=kw['form_id'],
+#  return context.Folder_delete(form_id=form_id,
 #                               selection_name=kw['selection_name'],
 #                               md5_object_uid_list=kw['md5_object_uid_list'])
 
@@ -102,7 +103,7 @@ try:
   request.set('editable_mode', 1)
   form.validate_all_to_request(request)
   request.set('editable_mode', editable_mode)
-  default_skin = context.getPortalObject().portal_skins.getDefaultSkin()
+  default_skin = portal.portal_skins.getDefaultSkin()
   allowed_styles = ("ODT", "ODS", "Hal", "HalRestricted")
   if getattr(getattr(context, dialog_method), 'pt', None) == "report_view" and \
      request.get('your_portal_skin', default_skin) not in allowed_styles:
@@ -179,8 +180,11 @@ query = request_form.get("query", None)
 fix = int(request_form.get("fix", "0"))
 if query != "" or (query == "" and fix > 0):  # force empty query when fix == 1
   listbox = getattr(context, form_id).Form_getListbox()
-  kw['uids'] = [int(getattr(document, "uid"))
-                for document in context.Base_searchUsingListbox(listbox, query)]
+  if listbox is not None:
+    kw['uids'] = [int(getattr(document, "uid"))
+                  for document in context.Base_searchUsingListbox(listbox, query)]
+  else:
+    log('Action {} should not specify `uids` as its parameters when it does not take object list from the previous view!'.format(dialog_method), level=ERROR)
 elif query == "" and fix == 0:
   return context.Base_renderMessage(translate("All documents are selected! Submit again to proceed or Cancel and narrow down your search"), WARNING)
 
@@ -189,7 +193,7 @@ elif query == "" and fix == 0:
 
 # if dialog_category is object_search, then edit the selection
 if dialog_category == "object_search" :
-  context.portal_selections.setSelectionParamsFor(kw['selection_name'], kw)
+  portal.portal_selections.setSelectionParamsFor(kw['selection_name'], kw)
 
 # Remove empty values for make_query.
 clean_kw = dict((k, v) for k, v in kw.items() if v not in (None, [], ()))
@@ -231,7 +235,7 @@ if True:
     # manually,
     if 'portal_skin' in clean_kw:
       new_skin_name = clean_kw['portal_skin']
-      context.getPortalObject().portal_skins.changeSkin(new_skin_name)
+      portal.portal_skins.changeSkin(new_skin_name)
       request.set('portal_skin', new_skin_name)
       deferred_portal_skin = clean_kw.get('deferred_portal_skin')
       if deferred_portal_skin:
@@ -262,7 +266,7 @@ if True:
   # RJS: If skin selection is different than Hal* then ERP5Document_getHateoas
   # does not exist and we call form method directly
   # If update_method was clicked and the target is the original dialog form then we must not call dialog_form directly because it returns HTML
-  if clean_kw.get("portal_skin", context.getPortalObject().portal_skins.getDefaultSkin()) not in ("Hal", "HalRestricted", "View"):
+  if clean_kw.get("portal_skin", portal.portal_skins.getDefaultSkin()) not in ("Hal", "HalRestricted", "View"):
     return dialog_form(**kw)
 
   # dialog_form can be anything from a pure python function, class method to ERP5 Form or Python Script

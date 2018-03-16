@@ -501,6 +501,35 @@ def getRealRelativeUrl(document):
   return '/'.join(portal.portal_url.getRelativeContentPath(document))
 
 
+def parseActionUrl(url):
+  """Parse usual ERP5 Action URL into components: ~root, context~, view_id, param_dict, url.
+
+  :param url: {str} is expected to be in form https://<site_root>/context/view_id?optional=params
+  """
+  param_dict = {}
+  url_and_params = url.split(site_root.absolute_url())[-1].split('?')
+  _, script = url_and_params[0].strip("/ ").rsplit('/', 1)
+  if len(url_and_params) > 1:
+    for param in url_and_params[1].split('&'):
+      param_name, param_value = param.split('=')
+      if "+" in param_value:
+        param_value = param_value.replace("+", " ")
+      if ":" in param_name:
+        param_name, param_type = param_name.split(":")
+        if param_type == "int":
+          param_value = int(param_value)
+        elif param_type == "bool":
+          param_value = True if param_value.lower() in ("true", "1") else False
+        else:
+          raise ValueError("Cannot convert param {}={} to type {}. Feel free to add implemetation at the position of this exception.".format(
+            param_name, param_value, param_type))
+      param_dict[param_name] = param_value
+  return {
+    'view_id': script,
+    'params': param_dict,
+    'url': url
+  }
+
 def getFormRelativeUrl(form):
   return portal.portal_catalog(
     portal_type=("ERP5 Form", "ERP5 Report"),
@@ -514,7 +543,7 @@ def getFormRelativeUrl(form):
 def getFieldDefault(form, field, key, value=None):
   """Get available value for `field` preferably in python-object from REQUEST or from field's default."""
   if value is None:
-    value = REQUEST.form.get(field.id, REQUEST.form.get(key, MARKER))
+    value = REQUEST.get(field.id, REQUEST.get(key, MARKER))
     # use marker because default value can be intentionally empty string
     if value is MARKER:
       value = field.get_value('default', request=REQUEST, REQUEST=REQUEST)
@@ -1172,45 +1201,6 @@ def renderForm(traversed_document, form, response_dict, key_prefix=None, selecti
     if value is not None:
       REQUEST.set(key, value)
 
-# XXX form action update, etc
-def renderRawField(field):
-  meta_type = field.meta_type
-
-  return {
-    "meta_type": field.meta_type
-  }
-
-
-  if meta_type == "MethodField":
-    result = {
-      "meta_type": field.meta_type
-    }
-  else:
-    result = {
-      "meta_type": field.meta_type,
-      "_values": field.values,
-      # XXX TALES expression is not JSON serializable by default
-      # "_tales": field.tales
-      "_overrides": field.overrides
-    }
-  if meta_type == "ProxyField":
-    result['_delegated_list'] = field.delegated_list
-#     try:
-#       result['_delegated_list'].pop('list_method')
-#     except KeyError:
-#       pass
-
-  # XXX ListMethod is not JSON serialized by default
-  try:
-    result['_values'].pop('list_method')
-  except KeyError:
-    pass
-  try:
-    result['_overrides'].pop('list_method')
-  except KeyError:
-    pass
-  return result
-
 
 def renderFormDefinition(form, response_dict):
   """Form "definition" is configurable in Zope admin: Form -> Order."""
@@ -1221,7 +1211,7 @@ def renderFormDefinition(form, response_dict):
       field_list = []
 
       for field in form.get_fields_in_group(group['goid'], include_disabled=1):
-        field_list.append((field.id, renderRawField(field)))
+        field_list.append((field.id, {'meta_type': field.meta_type}))
 
       group_list.append((group['gid'], field_list))
   response_dict["group_list"] = group_list
@@ -1316,22 +1306,26 @@ def calculateHateoas(is_portal=None, is_site_root=None, traversed_document=None,
       )
     response.setStatus(401)
     return ""
-  
+
   elif mime_type != traversed_document.Base_handleAcceptHeader([mime_type]):
     response.setStatus(406)
     return ""
-  
-  
+
   elif (mode == 'root') or (mode == 'traverse'):
-    #################################################
-    # Raw document
-    #################################################
+    ##
+    # Render ERP Document with a `view` specified
+    # `view` contains view's name and we extract view's URL (we suppose form ${object_url}/Form_view)
+    # which after expansion gives https://<site-root>/context/view_id?optional=params
+
+
     if (REQUEST is not None) and (REQUEST.other['method'] != "GET"):
       response.setStatus(405)
       return ""
+
     # Default properties shared by all ERP5 Document and Site
-    action_dict = {}
-  #   result_dict['_relative_url'] = traversed_document.getRelativeUrl()
+    current_action = {}  # current action parameters (context, script, URL params)
+    action_dict = {}  # actions available on current `traversed_document`
+
     result_dict['title'] = traversed_document.getTitle()
 
     # Add a link to the portal type if possible
@@ -1364,24 +1358,19 @@ def calculateHateoas(is_portal=None, is_site_root=None, traversed_document=None,
           "name": Base_translateString(container.getTitle()),
         }
 
-    # Extract embedded form in the document view
-    embedded_url = None
-
+    # Find current action URL and extract embedded view
     erp5_action_dict = portal.Base_filterDuplicateActions(
       portal.portal_actions.listFilteredActionsFor(traversed_document))
     for erp5_action_key in erp5_action_dict.keys():
       for view_action in erp5_action_dict[erp5_action_key]:
         # Try to embed the form in the result
         if (view == view_action['id']):
-          embedded_url = '%s' % view_action['url']
-
-    # `form_id` should be actually called `dialog_id` in case of form dialogs
-    # so real form_id of a previous view stays untouched.
-    # Here we save previous form_id to `last_form_id` so it does not get overriden by `dialog_id`
+          current_action = parseActionUrl('%s' % view_action['url'])  # current action/view being rendered
+    # If there is a "form_id" in the REQUEST then it means that last view was actually a form
+    # and we are most likely in a dialog. We save previous form into `last_form_id` ...
     last_form_id =  REQUEST.get('form_id', "") if REQUEST is not None else ""
     last_listbox = None
-    # So we can do some magic with it! Namely get previous selection (if exists) and deprecated
-    # selection_name which is often required (for e.g. Folder_viewWorkflowActionDialog)
+    # ... so we can do some magic with it (especially embedded listbox if exists)!
     try:
       if last_form_id:
         last_form = getattr(context, last_form_id)
@@ -1389,46 +1378,43 @@ def calculateHateoas(is_portal=None, is_site_root=None, traversed_document=None,
     except AttributeError:
       pass
 
-    form_id = ""
-    if (embedded_url is not None):
-      # XXX Try to fetch the form in the traversed_document of the document
-      # Of course, this code will completely crash in many cases (page template
-      # instead of form, unexpected action TALES expression). Happy debugging.
-      # renderer_form_relative_url = view_action['url'][len(portal.absolute_url()):]
-      form_id = embedded_url.split('?', 1)[0].split("/")[-1]
-      # renderer_form = traversed_document.restrictedTraverse(form_id, None)
-      # XXX Proxy field are not correctly handled in traversed_document of web site
-      renderer_form = getattr(traversed_document, form_id)
-      if (renderer_form is not None):
+    # If we have current action definition we are able to render embedded view
+    # which should be a "ERP5 Form" but in reality can be anything
+    if current_action.get('view_id', ''):
+      view_instance = getattr(traversed_document, current_action['view_id'])
+      if (view_instance is not None):
         embedded_dict = {
           '_links': {
             'self': {
-              'href': embedded_url
+              'href': current_action['url']
             }
           }
         }
 
+        # In order not to use Selections we need to pass all search attributes to *a listbox inside the form dialog*
+        # in case there was a listbox in the previous form. No other case!
+        if getattr(view_instance, "pt", "") == "form_dialog" and last_form_id and last_listbox:
+        #  If a Lisbox's list_method takes `uid` as input parameter then it will be ready in the request. But the actual
+        # computation is too expensive so we make it lazy (and evaluate any callable at `selectKwargsForCallable`)
+          REQUEST.set("uid", lazyUidList(traversed_document, last_listbox, query))
+
         # Put all query parameters (?reset:int=1&workflow_action=start_action) in request to mimic usual form display
-        query_param_dict = {}
-        query_split = embedded_url.split('?', 1)
-        if len(query_split) == 2:
-          for query_parameter in query_split[1].split("&"):
-            query_key, query_value = query_parameter.split('=')
-            # often + is used instead of %20 so we replace for space here
-            query_param_dict[query_key] = query_value.replace("+", " ")
+        # Request is later used for method's arguments discovery so set URL params into REQUEST (just like it was sent by form)
+        for query_key, query_value in current_action['params'].items():
+          REQUEST.set(query_key, query_value)
 
         # If our "form" is actually a Script (nothing is sure in ERP5) then execute it here
         try:
-          if "Script" in renderer_form.meta_type:
+          if "Script" in view_instance.meta_type:
             # we suppose that the script takes only what is given in the URL params
-            return renderer_form(**query_param_dict)
+            return view_instance(**current_action['params'])
         except AttributeError:
           # if renderer form does not have attr meta_type then it is not a document
           # but most likely bound instance method. Some form_ids do actually point to methods.
-          returned_value = renderer_form(**query_param_dict)
+          returned_value = view_instance(**current_action['params'])
           # returned value is usually REQUEST.RESPONSE.redirect()
           log('ERP5Document_getHateoas', 'HAL_JSON cannot handle returned value "{!s}" from {}({!s})'.format(
-            returned_value, form_id, query_param_dict), 100)
+            returned_value, current_action['view_id'], current_action['params']), 100)
           status_message = Base_translateString('Operation executed')
           if isinstance(returned_value, (str, unicode)) and returned_value.startswith('http'):
             parsed_url = urlparse(returned_value)
@@ -1438,19 +1424,9 @@ def calculateHateoas(is_portal=None, is_site_root=None, traversed_document=None,
           return traversed_document.Base_redirect(keep_items={
             'portal_status_message': status_message})
 
-        # In order not to use Selections we need to pass all search attributes to *a listbox inside form dialog*
-        # in case there was a listbox in the previous form. No other case!
-        if getattr(renderer_form, "pt", "") == "form_dialog" and last_form_id and last_listbox:
-        #  If a Lisbox's list_method takes `uid` as input parameter then it will be ready in the request. But the actual
-        # computation is too expensive so we make it lazy (and evaluate any callable at `selectKwargsForCallable`)
-          query_param_dict["uid"] = lazyUidList(traversed_document, last_listbox, query)
-
-        # Request is later used for method's arguments discovery so set URL params into REQUEST (just like it was sent by form)
-        for query_key, query_value in query_param_dict.items():
-          REQUEST.set(query_key, query_value)
         # Embedded Form can be a Script or even a class method thus we mitigate here
 
-        renderForm(traversed_document, renderer_form, embedded_dict)
+        renderForm(traversed_document, view_instance, embedded_dict)
 
         result_dict['_embedded'] = {
           '_view': embedded_dict
@@ -1479,17 +1455,19 @@ def calculateHateoas(is_portal=None, is_site_root=None, traversed_document=None,
           if erp5_action_key not in ("view", "object_view", "object_jio_view"):
             # previous view's form_id required almost everything but other views
             url_template_key = "traverse_generator_non_view"
-          # XXX This line is only optimization for shorter URL and thus is ugly
-          if not (form_id or last_form_id):
+          # but when we do not have the last form id we do not pass is of course
+          if not (current_action.get('view_id', '') or last_form_id):
             url_template_key = "traverse_generator"
 
           erp5_action_list[-1]['href'] = url_template_dict[url_template_key] % {
                 "root_url": site_root.absolute_url(),
-                "script_id": script.id,
+                "script_id": script.id,                                   # this script (ERP5Document_getHateoas)
                 "relative_url": traversed_document.getRelativeUrl().replace("/", "%2F"),
                 "view": erp5_action_list[-1]['name'],
                 # add form_id for actions going from module view (form_list) and from document view (form_view)
-                "form_id": form_id if form_id and renderer_form.pt in ("form_view", "form_list") else last_form_id
+                "form_id": (current_action['view_id']
+                            if current_action.get('view_id', '') and view_instance.pt in ("form_view", "form_list")
+                            else last_form_id)
               }
 
         if erp5_action_key == 'object_jump':
