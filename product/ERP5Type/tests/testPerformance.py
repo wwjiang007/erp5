@@ -368,3 +368,20 @@ class TestPerformance(TestPerformanceMixin):
               MIN_OBJECT_MANY_LINES_VIEW,
               req_time,
               MAX_OBJECT_MANY_LINES_VIEW))
+
+    def test_getCreationDate(self):
+      """
+      Make sure that getCreationDate runs fast even if there is very long history.
+      """
+      foo = self.foo_module.newContent(portal_type='Foo')
+      for i in range(100000):
+        foo.edit(comment='')
+      self.tic()
+      # First time it may be slow.
+      foo.getCreationDate()
+      # Second time it must not be slow.
+      start = time.time()
+      foo.getCreationDate()
+      end = time.time()
+      self.assertTrue(end-start < 0.01)
+
