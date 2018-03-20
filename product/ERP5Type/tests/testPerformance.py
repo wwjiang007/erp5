@@ -383,5 +383,5 @@ class TestPerformance(TestPerformanceMixin):
       start = time()
       foo.getCreationDate()
       end = time()
-      self.assertTrue(end-start < 0.01)
+      self.assertTrue(end-start < 0.01, '%.4f' % (end-start))
 
