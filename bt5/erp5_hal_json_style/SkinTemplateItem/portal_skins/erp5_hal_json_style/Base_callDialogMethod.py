@@ -257,17 +257,21 @@ if True:
   # with the content of REQUEST.URL
   request.set('URL', '%s/%s' % (context.absolute_url(), dialog_method))
 
-  # RJS: If we are in deferred mode - call the form directly and return
-  # dialog method is now `Base_activateSimpleView` - the only script in
-  # deferred portal_skins folder
-  if clean_kw.get('deferred_style', 0):
-    return dialog_form(**kw)  # deferred form should return redirect with a message
+  # Only in case we are not updating but executing - then proceed with direct
+  # execution based on Skin selection
+  if dialog_method != update_method:
+    # RJS: If we are in deferred mode - call the form directly and return
+    # dialog method is now `Base_activateSimpleView` - the only script in
+    # deferred portal_skins folder
+    if clean_kw.get('deferred_style', 0):
+      return dialog_form(**kw)  # deferred form should return redirect with a message
 
-  # RJS: If skin selection is different than Hal* then ERP5Document_getHateoas
-  # does not exist and we call form method directly
-  # If update_method was clicked and the target is the original dialog form then we must not call dialog_form directly because it returns HTML
-  if clean_kw.get("portal_skin", portal.portal_skins.getDefaultSkin()) not in ("Hal", "HalRestricted", "View"):
-    return dialog_form(**kw)
+    # RJS: If skin selection is different than Hal* then ERP5Document_getHateoas
+    # does not exist and we call form method directly
+    # If update_method was clicked and the target is the original dialog for
+    # then we must not call dialog_form directly because it returns HTML
+    if clean_kw.get("portal_skin", portal.portal_skins.getDefaultSkin()) not in ("Hal", "HalRestricted", "View"):
+      return dialog_form(**kw)
 
   # dialog_form can be anything from a pure python function, class method to ERP5 Form or Python Script
   try:
