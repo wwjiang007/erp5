@@ -380,8 +380,8 @@ class TestPerformance(TestPerformanceMixin):
       # First time it may be slow.
       foo.getCreationDate()
       # Second time it must not be slow.
-      start = time.time()
+      start = time()
       foo.getCreationDate()
-      end = time.time()
+      end = time()
       self.assertTrue(end-start < 0.01)
 
