@@ -3131,8 +3131,8 @@ class Base( CopyContainer,
     """
       Returns the creation date of the document based on workflow information
     """
-    if getattr(self, '__creation_date', None) is not None:
-      return DateTime(self.creation_date)
+    if getattr(self, '_creation_date', None) is not None:
+      return DateTime(self._creation_date)
 
     # Check if edit_workflow defined
     portal_workflow = self.getPortalObject().portal_workflow
@@ -3153,7 +3153,7 @@ class Base( CopyContainer,
       if getattr(aq_base(self), 'CreationDate', None) is not None:
         result = asDate(self.CreationDate())
     if result is not None:
-      self.__creation_date = DateTime(result)
+      self._creation_date = DateTime(result)
       return result
     return None # JPS-XXX - try to find a way to return a creation date instead of None
 
