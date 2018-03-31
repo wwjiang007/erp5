@@ -30,6 +30,7 @@
 import unittest
 import os
 import urllib
+import requests
 
 from subprocess import Popen, PIPE
 from Testing import ZopeTestCase
@@ -224,54 +225,46 @@ class TestXHTMLMixin(ERP5TypeTestCase):
       self.fail(message)
 
   def test_html_file(self):
-    path_list = os.environ.get('CGI_PATH',
-    '/usr/lib/cgi-bin:/usr/lib/cgi-bin/w3c-markup-validator').split(os.pathsep)
+    skins_tool = self.portal.portal_skins
+    path_list = []
+    for script_path, script in skins_tool.ZopeFind(
+              skins_tool, obj_metatypes=['File'], search_sub=1):
+      is_required_check_path = True
+      ignore_bts = ['erp5_jquery','erp5_fckeditor', 'erp5_svg_editor', 'erp5_jquery_ui']
+      if script_path.endswith('.html'):
+        for ignore_bt_name in ignore_bts:
+          if  script_path.startswith(ignore_bt_name):
+            is_required_check_path = False
+            break;
+        if is_required_check_path:
+          path_list.append(script_path)
+
+    def validate_html_file(source_path):
+      message = ['Using %s validator to parse the file "%s"'
+                 ' with warnings%sdisplayed :'
+                % (validator.name, source_path,
+                   validator.show_warnings and ' ' or ' NOT ')]
+      source = self.publish(source_path).getBody()
+      result_list_list = validator.getErrorAndWarningList(source)
+      severity_list = ['Error']
+      if validator.show_warnings:
+        severity_list.append('Warning')
+      for i, severity in enumerate(severity_list):
+        for line, column, msg in result_list_list[i]:
+          if line is None and column is None:
+            message.append('%s: %s' % (severity, msg))
+          else:
+            message.append('%s: line %s column %s : %s' %
+                           (severity, line, column, msg))
+      return len(message) == 1, '\n'.join(message)
+
+    def html_file(check_path):
+      self.assert_(*validate_html_file(source_path=check_path))
+
+    portal_skins_path = '%s/portal_skins' % self.portal.getId()
     for path in path_list:
-      validator_path = os.path.join(path, 'check')
-      if os.path.exists(validator_path):
-        validator = W3Validator(validator_path, show_warnings)
-        break
-    if validator is not None:
-      skins_tool = self.portal.portal_skins
-      path_list = []
-      for script_path, script in skins_tool.ZopeFind(
-                skins_tool, obj_metatypes=['File'], search_sub=1):
-        is_required_check_path = True
-        ignore_bts = ['erp5_jquery','erp5_fckeditor', 'erp5_svg_editor', 'erp5_jquery_ui']
-        if script_path.endswith('.html'):
-          for ignore_bt_name in ignore_bts:
-            if  script_path.startswith(ignore_bt_name):
-              is_required_check_path = False
-              break;
-          if is_required_check_path:
-            path_list.append(script_path)
-
-      def validate_html_file(source_path):
-        message = ['Using %s validator to parse the file "%s"'
-                   ' with warnings%sdisplayed :'
-                  % (validator.name, source_path,
-                     validator.show_warnings and ' ' or ' NOT ')]
-        source = self.publish(source_path).getBody()
-        result_list_list = validator.getErrorAndWarningList(source)
-        severity_list = ['Error']
-        if validator.show_warnings:
-          severity_list.append('Warning')
-        for i, severity in enumerate(severity_list):
-          for line, column, msg in result_list_list[i]:
-            if line is None and column is None:
-              message.append('%s: %s' % (severity, msg))
-            else:
-              message.append('%s: line %s column %s : %s' %
-                             (severity, line, column, msg))
-        return len(message) == 1, '\n'.join(message)
-
-      def html_file(check_path):
-        self.assert_(*validate_html_file(source_path=check_path))
-
-      portal_skins_path = '%s/portal_skins' % self.portal.getId()
-      for path in path_list:
-        check_path = '%s/%s' % (portal_skins_path, path)
-        html_file(check_path)
+      check_path = '%s/%s' % (portal_skins_path, path)
+      html_file(check_path)
 
   def test_PythonScriptSyntax(self):
     """
@@ -405,6 +398,7 @@ class TestXHTML(TestXHTMLMixin):
       'erp5_ingestion',
       'erp5_ingestion_mysql_innodb_catalog',
       'erp5_crm',
+      'erp5_interface_post',
 
       'erp5_jquery',
       'erp5_jquery_ui',
@@ -481,6 +475,60 @@ class TestXHTML(TestXHTMLMixin):
     default_site_preference = portal_preferences.default_site_preference
     if self.portal.portal_workflow.isTransitionPossible(default_site_preference, 'enable'):
       default_site_preference.enable()
+
+
+class NuValidator(object):
+
+  def __init__(self, show_warnings):
+    self.show_warnings = show_warnings
+    self.name = 'nu'
+
+  def _parse_validation_results(self, validator_url, response):
+    """
+    parses the validation results, returns a list of tuples:
+    line_number, col_number, error description
+    """
+    if response.status_code != 200:
+      return [
+        [(None, None,
+          'Contacting the external validator %s failed with status: %i' %
+            (validator_url, response.status_code))],
+        []
+      ]
+
+    content_type = response.headers.get('Content-Type', None)
+    if content_type != 'application/json;charset=utf-8':
+      return [[(None, None, 'Unsupported validator response content type %s' %
+                            content_type)], []]
+
+    result = response.json()
+
+    error_list = []
+    warning_list = []
+    for message in result['messages']:
+      if message['type'] == 'info':
+        severity_list = warning_list
+      else:
+        severity_list = error_list
+      txt = message['message'].encode('UTF-8')
+      if 'extract' in message:
+        txt += ': %s' % message['extract'].encode('UTF-8')
+      severity_list.append([message['lastLine'], message['lastColumn'], txt])
+    return [error_list, warning_list]
+
+  def getErrorAndWarningList(self, page_source):
+    '''
+      retrun two list : a list of errors and an other for warnings
+    '''
+    validator_url = 'https://validator.erp5.net/'
+    response = requests.post(validator_url,
+                             data=page_source.encode('UTF-8'),
+                             params={'out': 'json'},
+                             headers={
+                               'Content-Type': 'text/html; charset=UTF-8'
+                             })
+    return self._parse_validation_results(validator_url, response)
+
 
 class W3Validator(object):
 
@@ -774,6 +822,9 @@ elif validator_to_use == 'tidy':
     print 'tidy is not installed at %s' % validator_path
   else:
     validator = TidyValidator(validator_path, show_warnings)
+
+elif validator_to_use == 'nu':
+  validator = NuValidator(show_warnings)
 
 def test_suite():
   # add the tests

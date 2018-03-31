@@ -12,6 +12,7 @@
 #
 ##############################################################################
 
+from functools import partial
 from OFS import Moniker
 from zExceptions import BadRequest
 from AccessControl import ClassSecurityInfo, getSecurityManager
@@ -27,6 +28,7 @@ from Products.ERP5Type import Permissions
 from Acquisition import aq_base, aq_inner, aq_parent
 from Products.ERP5Type.Accessor.Constant import PropertyGetter as ConstantGetter
 from Products.ERP5Type.Globals import PersistentMapping, MessageDialog
+from Products.ERP5Type.ImmediateReindexContextManager import ImmediateReindexContextManager
 from Products.ERP5Type.Utils import get_request
 from Products.ERP5Type.Message import translateString
 from Products.CMFCore.WorkflowCore import WorkflowException
@@ -422,15 +424,17 @@ class CopyContainer:
                                          path_item_list=previous_path,
                                          new_id=self.id)
 
-  def _duplicate(self, cp):
+  def _duplicate(self, cp, reindex_kw=None, immediate_reindex=False):
     _, result = self.__duplicate(
       cp,
       duplicate=True,
-      is_indexable=True,
+      is_indexable=None,
+      reindex_kw=reindex_kw,
+      immediate_reindex=immediate_reindex,
     )
     return result
 
-  def __duplicate(self, cp, duplicate, is_indexable):
+  def __duplicate(self, cp, duplicate, is_indexable, reindex_kw, immediate_reindex):
     try:
       cp = _cb_decode(cp)
     except:
@@ -490,7 +494,9 @@ class CopyContainer:
       new_id = self._get_id(orig_id)
       result.append({'id': orig_id, 'new_id': new_id})
       new_ob._setId(new_id)
-      if not is_indexable:
+      if reindex_kw is not None:
+        new_ob.setDefaultReindexParameterDict(reindex_kw)
+      if is_indexable is not None and not is_indexable:
         new_ob._setNonIndexable()
       self._setObject(new_id, new_ob, set_owner=set_owner)
       new_ob = self._getOb(new_id)
@@ -503,6 +509,16 @@ class CopyContainer:
       if not set_owner:
         # try to make ownership implicit if possible
         new_ob.manage_changeOwnershipType(explicit=0)
+      method = new_ob.immediateReindexObject
+      if reindex_kw is not None:
+        method = partial(method, **reindex_kw)
+      if isinstance(immediate_reindex, ImmediateReindexContextManager):
+        immediate_reindex.append(method)
+      elif immediate_reindex:
+        # Immediately reindexing document that we just pasted is safe, as no
+        # other transaction can by definition see it, so there cannot be a race
+        # condition leading to stale catalog content.
+        method()
     return op, result
 
   def _postDuplicate(self):
@@ -531,7 +547,7 @@ class CopyContainer:
     self.isIndexable = ConstantGetter('isIndexable', value=False)
     self.__recurse('_setNonIndexable')
 
-  def manage_pasteObjects(self, cb_copy_data=None, is_indexable=True, REQUEST=None):
+  def manage_pasteObjects(self, cb_copy_data=None, is_indexable=None, reindex_kw=None, immediate_reindex=False, REQUEST=None):
     """Paste previously copied objects into the current object.
 
     If calling manage_pasteObjects from python code, pass the result of a
@@ -540,6 +556,18 @@ class CopyContainer:
 
     If is_indexable is False, we will avoid indexing the pasted objects and
     subobjects
+
+    immediate_reindex (bool)
+      Immediately (=during current transaction) reindex created document, so
+      it is possible to find it in catalog before transaction ends.
+      Note: this does not apply to subobjects which may be created during
+      pasting. Only the topmost object will be immediately reindexed. Any
+      subobject will be reindexed later, using activities.
+
+      If a ImmediateReindexContextManager instance is given, a context (in
+      python sense) must have been entered with it, and indexation will
+      occur when that context is exited, allowing further changes before
+      first indexation (ex: workflow state change, property change).
     """
     cp = None
     if cb_copy_data is not None:
@@ -552,6 +580,8 @@ class CopyContainer:
       cp,
       duplicate=False,
       is_indexable=is_indexable,
+      reindex_kw=reindex_kw,
+      immediate_reindex=immediate_reindex,
     )
     if REQUEST is None:
       return result

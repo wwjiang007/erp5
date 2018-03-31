@@ -744,7 +744,6 @@ class FileWidget(TextWidget):
                                   type="file",
                                   name=key,
                                   css_class=field.get_value('css_class'),
-                                  value=value,
                                   size=field.get_value('display_width'),
                                   maxlength=display_maxwidth,
                                   extra=field.get_value('extra'))
@@ -753,7 +752,6 @@ class FileWidget(TextWidget):
                                   type="file",
                                   name=key,
                                   css_class=field.get_value('css_class'),
-                                  value=value,
                                   size=field.get_value('display_width'),
                                   extra=field.get_value('extra'))
 
@@ -1156,12 +1154,20 @@ class ListWidget(SingleItemsWidget):
       return "\n".join([list_widget, input_hidden])
 
     def render_item(self, text, value, key, css_class, extra_item):
-        return self.render_element('option', contents=text, value=value,
-                              extra=extra_item)
+        if text:
+          return self.render_element('option', contents=text, value=value,
+                                     extra=extra_item)
+        else:
+          return self.render_element('option', label=' ', value=value,
+                                     extra=extra_item)
 
     def render_selected_item(self, text, value, key, css_class, extra_item):
-        return self.render_element('option', contents=text, value=value,
-                              selected=None, extra=extra_item)
+        if text:
+          return self.render_element('option', contents=text, value=value,
+                                     selected=None, extra=extra_item)
+        else:
+          return self.render_element('option', label=' ', value=value,
+                                     selected=None, extra=extra_item)
 
 ListWidgetInstance = ListWidget()
 
@@ -1195,12 +1201,20 @@ class MultiListWidget(MultiItemsWidget):
       return "\n".join([multi_list,input_hidden])
 
     def render_item(self, text, value, key, css_class, extra_item):
-        return self.render_element('option', contents=text, value=value,
-                              extra=extra_item)
+        if text:
+          return self.render_element('option', contents=text, value=value,
+                                     extra=extra_item)
+        else:
+          return self.render_element('option', label=' ', value=value,
+                                     extra=extra_item)
 
     def render_selected_item(self, text, value, key, css_class, extra_item):
-        return self.render_element('option', contents=text, value=value,
-                              selected=None, extra=extra_item)
+        if text:
+          return self.render_element('option', contents=text, value=value,
+                                     selected=None, extra=extra_item)
+        else:
+          return self.render_element('option', label=' ', value=value,
+                                     selected=None, extra=extra_item)
 
 MultiListWidgetInstance = MultiListWidget()
 

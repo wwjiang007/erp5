@@ -303,20 +303,20 @@ class MatrixBoxWidget(Widget.Widget):
     <!-- Matrix Content -->
     <div class="matrixbox_label_tab">%s</div>
     <div class="MatrixContent">
-     <table cellpadding="0" cellspacing="0" border="0">
+     <table>
     """ % (first_tab+extra_dimension_label)
 
             # Create the footer. This should be replaced by DTML
             # And work as some kind of parameter
             footer = """\
        <tr>
-        <td colspan="%s" align="center" valign="middle"
+        <td colspan="%i"
             class="Data footer">
         </td>
        </tr>
       </table>
      </div>
-    """ % len(columns)
+    """ % (len(columns) + 1)
 
             list_header = """\
     <tr class="matrixbox_label_line"><td class=\"Data\"></td>

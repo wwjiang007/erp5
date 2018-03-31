@@ -21,6 +21,7 @@
 #
 ##############################################################################
 
+from functools import partial
 import zope.interface
 from Products.ERP5Type.Globals import InitializeClass
 from AccessControl import ClassSecurityInfo, getSecurityManager
@@ -34,6 +35,7 @@ from Products.ERP5Type import interfaces, Constraint, Permissions, PropertySheet
 from Products.ERP5Type.Base import getClassPropertyList
 from Products.ERP5Type.UnrestrictedMethod import UnrestrictedMethod
 from Products.ERP5Type.Utils import deprecated, createExpressionContext
+from Products.ERP5Type.ImmediateReindexContextManager import ImmediateReindexContextManager
 from Products.ERP5Type.XMLObject import XMLObject
 from Products.ERP5Type.Cache import CachingMethod
 from Products.ERP5Type.dynamic.accessor_holder import getPropertySheetValueList, \
@@ -42,9 +44,8 @@ from Products.ERP5Type.dynamic.accessor_holder import getPropertySheetValueList,
 ERP5TYPE_SECURITY_GROUP_ID_GENERATION_SCRIPT = 'ERP5Type_asSecurityGroupId'
 
 from TranslationProviderBase import TranslationProviderBase
+from Products.ERP5Type.Accessor.Constant import PropertyGetter as ConstantGetter
 from Products.ERP5Type.Accessor.Translation import TRANSLATION_DOMAIN_CONTENT_TRANSLATION
-
-from sys import exc_info
 from zLOG import LOG, ERROR
 from Products.CMFCore.exceptions import zExceptions_Unauthorized
 
@@ -283,6 +284,7 @@ class ERP5TypeInformation(XMLObject,
       'invoice', 'invoice_movement', 'balance_transaction_line',
       # CRM
       'event', 'ticket',
+      'interface_post', # object used to track exchanges in/out of ERP5
       # DMS
       'document', 'web_document', 'file_document', 'embedded_document',
       'recent_document', 'my_document', 'template_document',
@@ -361,11 +363,22 @@ class ERP5TypeInformation(XMLObject,
     def constructInstance(self, container, id, created_by_builder=0,
                           temp_object=0, compute_local_role=None,
                           notify_workflow=True, is_indexable=None,
-                          activate_kw=None, reindex_kw=None, **kw):
+                          activate_kw=None, reindex_kw=None,
+                          immediate_reindex=False, **kw):
       """
       Build a "bare" instance of the appropriate type in
       'container', using 'id' as its id.
       Call the init_script for the portal_type.
+
+      immediate_reindex (bool, ImmediateReindexContextManager)
+        Immediately (=during current transaction) reindex created document, so
+        it is possible to find it in catalog before transaction ends.
+
+        If a ImmediateReindexContextManager instance is given, a context (in
+        python sense) must have been entered with it, and indexation will
+        occur when that context is exited, allowing further changes before
+        first indexation (ex: workflow state change, property change).
+
       Returns the object.
       """
       if compute_local_role is None:
@@ -428,6 +441,27 @@ class ERP5TypeInformation(XMLObject,
       if kw:
         ob._edit(force_update=1, **kw)
 
+      if not temp_object:
+        # As we juste created ob, we assume the whole subtree is of a
+        # reasonable size and hence can be walked in current transaction.
+        # Subtree may come from:
+        # - acquired setter (ex: address on a Person which actually exists on
+        #   a subdocument), which should be in very limited quantity
+        # - type-based init script, which will have to delegate any
+        #   large-document creation needs to later transactions
+        #   (activities). Or just not request immediate indexation.
+        # - if ImmediateReindexContextManager is used, anything until
+        #   context manager exits.
+        method = ob.recursiveImmediateReindexObject
+        if reindex_kw is not None:
+          method = partial(method, **reindex_kw)
+        if isinstance(immediate_reindex, ImmediateReindexContextManager):
+          immediate_reindex.append(method)
+        elif immediate_reindex:
+          # Immediately reindexing document that we just created is safe, as no
+          # other transaction can by definition see it, so there cannot be a race
+          # condition leading to stale catalog content.
+          method()
       return ob
 
     def _getPropertyHolder(self):
