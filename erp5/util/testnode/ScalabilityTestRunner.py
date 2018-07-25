@@ -54,9 +54,6 @@ from erp5.util.benchmark.thread import TestThread
 import signal
 from . import logger
 
-# TODO: some hardcoded values for dev purposes that will be removed soon
-FRONTEND_SOFTWARE = "https://lab.node.vifib.com/nexedi/slapos/raw/1.0.56/software/apache-frontend/software.cfg"
-
 FRONTEND_MASTER_DOMAIN = "scalability.nexedi.com"
 # max time to instance changing state: 2 hour
 MAX_INSTANCE_TIME = 60*60*2
@@ -92,6 +89,7 @@ PASSWORD_FILE = "/sr_pass"
 PASSWORD_LENGTH = 10
 HOSTFILE = "/hosts"
 SR_DICT = "frontend_software_dict"
+INSTANCE_DICT = "instances_dict"
 
 class ScalabilityTestRunner():
   def __init__(self, testnode):
@@ -132,7 +130,7 @@ class ScalabilityTestRunner():
     self.last_slapos_answer_request = []
     self.frontend_instance_guid = None
     
-  def _prepareSlapOS(self, software_path, computer_guid, create_partition=0):
+  def _prepareSlapOS(self, software_path, computer_guid, create_partition=0, state="available"):
     # create_partition is kept for compatibility
     """
     A proxy to supply : Install a software on a specific node
@@ -140,7 +138,7 @@ class ScalabilityTestRunner():
     logger.info("testnode, supply : %s %s", software_path, computer_guid)
     if self.authorize_supply :
       self.remaining_software_installation_dict[computer_guid] = software_path
-      self.slapos_communicator.supply(software_path, computer_guid)
+      self.slapos_communicator.supply(software_path, computer_guid, state)
       return {'status_code' : 0}                                          
     else:
       raise ValueError("Too late to supply now. ('self.authorize_supply' is False)")
@@ -176,25 +174,44 @@ class ScalabilityTestRunner():
                             "virtualhostroot-https-port" : 4443}
       config["sla-dict"]["instance_guid=%s" % frontend_instance_guid] = ["frontend"]
     return config
-  
-  def _createInstance(self, software_path, software_configuration, instance_title,
+
+  def getDictionaryFromFile(self, dict_file):
+    dictionary = {}
+    if os.path.isfile(dict_file):
+      with open(dict_file, 'r') as file:
+        dictionary = pickle.loads(file.read())
+    return dictionary
+
+  def updateDictionaryFile(self, dict_file, dictionary, key, value):
+    dictionary[key] = value
+    with open(dict_file, 'w') as file:
+      file.write(pickle.dumps(dictionary))
+
+  def _createInstance(self, software_path, software_configuration,
                       test_result, test_suite, frontend_software, frontend_instance_guid=None):
     """
-    Create scalability instance
+    Create scalability instance. If there is an old instance for this testsuite, it destroys it.
     """
     if self.authorize_request:
-      logger.info("testnode, request : %s", instance_title)
+      slappart_directory = self.testnode.config['srv_directory'].rsplit("srv", 1)[0]
+      instance_dict_file = slappart_directory + "var/" + INSTANCE_DICT
+      instance_dict = self.getDictionaryFromFile(instance_dict_file)
+      if test_suite in instance_dict:
+        self.slapos_communicator.requestInstanceDestroy(instance_dict[test_suite])
+      self.updateDictionaryFile(instance_dict_file, instance_dict, test_suite, self.instance_title)
+      logger.info("testnode, request : %s", self.instance_title)
       config = self._generateInstanceXML(software_configuration,
                                          test_result, test_suite, frontend_software, frontend_instance_guid)
       request_kw = {"partition_parameter_kw": {"_" : json.dumps(config)} }
-      self.slapos_communicator.requestInstanceStart(instance_title, request_kw)
+
+      self.slapos_communicator.requestInstanceStart(self.instance_title, request_kw)
       self.authorize_request = False
       return {'status_code' : 0}                                          
     else:
       raise ValueError("Softwares release not ready yet to launch instan\
 ces or already launched.")
-      return {'status_code' : 1}  
-      
+      return {'status_code' : 1}
+
   def prepareSlapOSForTestNode(self, test_node_slapos=None):
     """
     We will build slapos software needed by the testnode itself,
@@ -317,12 +334,9 @@ Require valid-user
     htaccess_file.write(file_content)
     htaccess_file.close()
     password_path = testsuite_directory + PASSWORD_FILE
-    password_file = open(password_path, "r+") if os.path.isfile(password_path) else open(password_path, "w+")
-    password = password_file.read()
-    if len(password) != PASSWORD_LENGTH:
+    with open(password_path, "w") as password_file:
       password = ''.join(random.choice(string.digits + string.letters) for i in xrange(PASSWORD_LENGTH))
       password_file.write(password)
-    password_file.close()
     user = TESTNODE_USER
     command = [apache_htpasswd, "-bc", testsuite_directory + HTPASSWD, user, password]
     self.testnode.process_manager.spawn(*command)
@@ -355,45 +369,23 @@ Require valid-user
       os.path.join("["+self.testnode.config['httpd_ip']+"]"+":"+self.testnode.config['httpd_software_access_port'],
       "software",self.randomized_path))
     self.reachable_profile = os.path.join(self.reachable_address, "software.cfg")
-    # Write the reachable address in the software.cfg file,
-    # by replacing <obfuscated_url> occurences by the current reachable address.
-    software_file = open(node_test_suite.custom_profile_path, "r")
-    file_content = software_file.readlines()
-    new_file_content = []
-    for line in file_content:
-      new_file_content.append(line.replace('<obfuscated_url>', self.reachable_address))
-    software_file.close()
-    os.remove(node_test_suite.custom_profile_path)
-    software_file = open(node_test_suite.custom_profile_path, "w")
-    for line in new_file_content:
-      software_file.write(line)
-    software_file.close()
 
   def newFrontendMasterSoftware(self, frontend_master_reference, frontend_software):
-    def getSoftwareDictionary(software_dict_file):
-      software_dict = {}
-      if os.path.isfile(software_dict_file):
-        with open(software_dict_file, 'r') as file:
-          software_dict = pickle.loads(file.read())
-      return software_dict
-    def updateSoftwareDictionary(software_dict_file, software_dict, frontend_master_reference, frontend_software):
-      software_dict[frontend_master_reference] = frontend_software
-      with open(software_dict_file, 'w') as file:
-        file.write(pickle.dumps(software_dict))
-    frontend_master_reference = frontend_master_reference.replace(";",",")
     slappart_directory = self.testnode.config['srv_directory'].rsplit("srv", 1)[0]
     software_dict_file = slappart_directory + "var/" + SR_DICT
-    software_dict = getSoftwareDictionary(software_dict_file)
+    software_dict = self.getDictionaryFromFile(software_dict_file)
     if frontend_master_reference in software_dict:
       if software_dict[frontend_master_reference] != frontend_software:
-        updateSoftwareDictionary(software_dict_file, software_dict, frontend_master_reference, frontend_software)
+        self.updateDictionaryFile(software_dict_file, software_dict, frontend_master_reference, frontend_software)
         return True
     else:
-      updateSoftwareDictionary(software_dict_file, software_dict, frontend_master_reference, frontend_software)
+      self.updateDictionaryFile(software_dict_file, software_dict, frontend_master_reference, frontend_software)
       return True
     return False
 
   def prepareFrontendMasterInstance(self, computer, frontend_software, test_suite_title):
+    if not frontend_software:
+      return None
     self.frontend_master_reference = "Scalability-Frontend-Master-"
     self.frontend_master_reference += "("+test_suite_title+")-"
     self.frontend_master_reference += str(computer).replace("'","")
@@ -467,6 +459,7 @@ Require valid-user
       node_test_suite.edit(configuration_list=configuration_list)
       self.launcher_nodes_computer_guid = test_configuration['launcher_nodes_computer_guid']
       self.instance_title = self._generateInstanceTitle(node_test_suite.test_suite_title)
+      self.frontend_software = configuration_list[0].get("frontend-url")
 
       self.createSoftwareReachableProfilePath(node_test_suite)
       logger.info("Software reachable profile path is: %s", self.reachable_profile)
@@ -479,9 +472,6 @@ Require valid-user
 					supply, 
 					self.reachable_profile, 
 					computer_guid=self.launcher_nodes_computer_guid[0])
-      # Delete old instances
-      logger.info("Destroying old requested instances")
-      self.slapos_communicator.requestInstanceDestroy(self.instance_title)
       # Ask for SR installation
       for computer_guid in self.involved_nodes_computer_guid:
         self._prepareSlapOS(self.reachable_profile, computer_guid) 
@@ -498,33 +488,32 @@ Require valid-user
         time.sleep(interval_time)
       # TODO : remove the line below wich simulate an answer from slapos master
       self._comeBackFromDummySlapOS()
-      # Ask for frontend SR installation and instance request
-      # XXX TODO: frontend software url will come from test_configuration soon
-      self.frontend_software = FRONTEND_SOFTWARE
-      self.frontend_instance_guid = self.prepareFrontendMasterInstance(self.launcher_nodes_computer_guid[0],
-                                                                       self.frontend_software,
-                                                                       node_test_suite.test_suite_title)
+      try:
+        self.frontend_instance_guid = self.prepareFrontendMasterInstance(self.launcher_nodes_computer_guid[0],
+                                                                         self.frontend_software,
+                                                                         node_test_suite.test_suite_title)
+      except Exception as e:
+        logger.error("Error preparing frontend master instance: " + str(e))
+        return {'status_code' : 1}
       if self.remainSoftwareToInstall() :
         # All softwares are not installed, however maxtime is elapsed, that's a failure.
         logger.error("All softwares are not installed.")
         return {'status_code' : 1}
       self.authorize_request = True
-      logger.debug("Softwares installed.")
+      logger.debug("All software installed.")
       # Launch instance
       try:
         self._createInstance(self.reachable_profile, 
                              configuration_list[0],
-                             self.instance_title,
                              node_test_suite.test_result,
                              node_test_suite.test_suite,
                              self.frontend_software,
                              self.frontend_instance_guid)
         logger.debug("Scalability instance requested.")
-      except Exception:
-        msg = "Unable to launch instance"
-        logger.exception(msg)
-        raise ValueError(msg)
-      self._waitInstanceCreation(self.instance_title)
+        self._waitInstanceCreation(self.instance_title)
+      except Exception as e:
+        logger.error("Error creating instance: " + str(e))
+        return {'status_code' : 1}
 
       return {'status_code' : 0}
     return {'status_code' : 1}
@@ -543,7 +532,7 @@ Require valid-user
         pass
     return suite, repo_location
 
-  def getInstanceInformation(self, suite):
+  def getInstanceInformation(self, suite, count):
     logger.info("Getting instance information:")
     instance_information_time = time.time()
     instance_information = self.slapos_communicator.getInstanceUrlDict()
@@ -572,9 +561,9 @@ Require valid-user
           else:
             response_dict = json.loads(result['stdout'])
             if response_dict["status_code"] != 0:
-              error_message = "Error while bootstrapping: " + response_dict["error_message"]
+              error_message = "Error while bootstrapping: " + str(response_dict["error_message"])
             bootstrap_password = response_dict["password"]
-          logger.info("Bootstrap password: " + bootstrap_password)
+          logger.info("Bootstrap password: " + str(bootstrap_password))
       except Exception as e:
         error_message = "Error while bootstrapping: " + str(e)
     return bootstrap_password, error_message
@@ -637,6 +626,7 @@ Require valid-user
     suite, repo_location = self.makeSuite(node_test_suite.test_suite, self.testnode.config['repository_path_list'])
     if suite == None:
       error_message = "Could not find test suite %s in the repositories" % node_test_suite.test_suite
+      test_result_proxy.reportFailure(stdout=error_message)
       return {'status_code' : 1, 'error_message': error_message }
 
     # Each cluster configuration is tested
@@ -644,10 +634,18 @@ Require valid-user
       # First configuration doesn't need XML configuration update.
       if count > 0:
         logger.info("Requesting instance with configuration %d" % count)
-        self._updateInstanceXML(configuration, self.instance_title,
-                                node_test_suite.test_result, node_test_suite.test_suite, self.frontend_software, self.frontend_instance_guid)
-
-      self.slapos_communicator.waitInstanceStarted(self.instance_title)
+        try:
+          self._updateInstanceXML(configuration, self.instance_title,
+                                  node_test_suite.test_result, node_test_suite.test_suite, self.frontend_software, self.frontend_instance_guid)
+        except Exception as e:
+          error_message = "Error updating instance configuration: " + str(e)
+      try:
+        self.slapos_communicator.waitInstanceStarted(self.instance_title)
+      except Exception as e:
+          error_message = "Error starting instance: " + str(e)
+      if error_message:
+        test_result_proxy.reportFailure(stdout=error_message)
+        return {'status_code' : 1, 'error_message': error_message }
       logger.debug("INSTANCE CORRECTLY STARTED")
 
       # Start only the current test
@@ -663,7 +661,7 @@ Require valid-user
       logger.info("Test case for count : %d is in a running state." % count)
 
       try:
-        instance_url, bootstrap_url, metric_url, site_availability_url = self.getInstanceInformation(suite)
+        instance_url, bootstrap_url, metric_url, site_availability_url = self.getInstanceInformation(suite, count)
       except Exception as e:
         error_message = "Error getting testsuite information: " + str(e)
         break
@@ -734,6 +732,12 @@ Require valid-user
       except Exception as e:
         error_message = "Error in communication with master: " + str(e)
         break
+
+    # Remove installed software
+    self.authorize_supply = True
+    logger.info("Removing installed software")
+    for computer_guid in self.involved_nodes_computer_guid:
+      self._prepareSlapOS(self.reachable_profile, computer_guid, state="destroyed")
 
     # If error appears then that's a test failure.    
     if error_message:

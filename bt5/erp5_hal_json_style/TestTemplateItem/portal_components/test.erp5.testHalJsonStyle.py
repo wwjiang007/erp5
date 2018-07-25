@@ -567,7 +567,7 @@ class TestERP5Document_getHateoas_mode_traverse(ERP5HALJSONStyleSkinsMixin):
     self.assertEqual(result_dict['_links']['action_object_view'][0]['name'], "view")
 
     self.assertEqual(result_dict['_links']['action_workflow'][0]['href'],
-                     "%s/web_site_module/hateoas/ERP5Document_getHateoas?mode=traverse&relative_url=%s&view=custom_action_no_dialog&form_id=Foo_view" % (
+                     "%s/web_site_module/hateoas/ERP5Document_getHateoas?mode=traverse&relative_url=%s&view=custom_action_no_dialog&extra_param_json=eyJmb3JtX2lkIjogIkZvb192aWV3In0=" % (
                        self.portal.absolute_url(),
                        urllib.quote_plus(document.getRelativeUrl())))
     self.assertEqual(result_dict['_links']['action_workflow'][0]['title'], "Custom Action No Dialog")
@@ -586,7 +586,7 @@ class TestERP5Document_getHateoas_mode_traverse(ERP5HALJSONStyleSkinsMixin):
     self.assertEqual(result_dict['_links']['site_root']['name'], self.portal.web_site_module.hateoas.getTitle())
 
     self.assertEqual(result_dict['_links']['action_object_new_content_action']['href'],
-                     "%s/web_site_module/hateoas/ERP5Document_getHateoas?mode=traverse&relative_url=%s&view=create_a_document&form_id=Foo_view" % (
+                     "%s/web_site_module/hateoas/ERP5Document_getHateoas?mode=traverse&relative_url=%s&view=create_a_document&extra_param_json=eyJmb3JtX2lkIjogIkZvb192aWV3In0=" % (
                        self.portal.absolute_url(),
                        urllib.quote_plus(document.getRelativeUrl())))
     self.assertEqual(result_dict['_links']['action_object_new_content_action']['title'], "Create a Document")
@@ -630,7 +630,7 @@ class TestERP5Document_getHateoas_mode_traverse(ERP5HALJSONStyleSkinsMixin):
     self.assertEqual(result_dict['_embedded']['_view']['listbox']['editable_column_list'], [['id', 'ID'], ['title', 'Title'], ['quantity', 'quantity'], ['start_date', 'Date']])
     self.assertEqual(result_dict['_embedded']['_view']['listbox']['sort_column_list'], [['id', 'ID'], ['title', 'Title'], ['quantity', 'Quantity'], ['start_date', 'Date']])
     self.assertEqual(result_dict['_embedded']['_view']['listbox']['list_method_template'],
-                     '%s/web_site_module/hateoas/ERP5Document_getHateoas?mode=search&relative_url=foo_module%%2F%s&form_relative_url=portal_skins/erp5_ui_test/Foo_view/listbox&list_method=objectValues&default_param_json=eyJwb3J0YWxfdHlwZSI6IFsiRm9vIExpbmUiXSwgImlnbm9yZV91bmtub3duX2NvbHVtbnMiOiB0cnVlfQ=={&query,select_list*,limit*,sort_on*,local_roles*,selection_domain*}' % (self.portal.absolute_url(), document.getId()))
+                     '%s/web_site_module/hateoas/ERP5Document_getHateoas?mode=search&relative_url=foo_module%%2F%s&form_relative_url=portal_skins/erp5_ui_test/Foo_view/listbox&list_method=objectValues&extra_param_json=eyJmb3JtX2lkIjogIkZvb192aWV3In0=&default_param_json=eyJwb3J0YWxfdHlwZSI6IFsiRm9vIExpbmUiXSwgImlnbm9yZV91bmtub3duX2NvbHVtbnMiOiB0cnVlfQ=={&query,select_list*,limit*,sort_on*,local_roles*,selection_domain*}' % (self.portal.absolute_url(), document.getId()))
     self.assertEqual(result_dict['_embedded']['_view']['listbox']['domain_root_list'], [['foo_category', 'FooCat'], ['foo_domain', 'FooDomain'], ['not_existing_domain', 'NotExisting']])
     NBSP_prefix = u'\xA0' * 4
     self.assertEqual(result_dict['_embedded']['_view']['listbox']['domain_dict'], {'foo_domain': [['a', 'a'], ['%sa1' % NBSP_prefix, 'a/a1'], ['%sa2' % NBSP_prefix, 'a/a2'], ['b', 'b']], 'foo_category': [['a', 'a'], ['a/a1', 'a/a1'], ['a/a2', 'a/a2'], ['b', 'b']]})
@@ -645,6 +645,18 @@ class TestERP5Document_getHateoas_mode_traverse(ERP5HALJSONStyleSkinsMixin):
 
     self.assertEqual(result_dict['_embedded']['_view']['_links']['form_definition']['href'], 'urn:jio:get:portal_skins/erp5_ui_test/Foo_view')
     self.assertEqual(result_dict['_embedded']['_view']['_links']['form_definition']['name'], 'Foo_view')
+    self.assertEqual(
+      result_dict['_embedded']['_view']['_embedded']['form_definition']['group_list'][0][0],
+      'left'
+    )
+    self.assertEqual(
+      result_dict['_embedded']['_view']['_embedded']['form_definition']['group_list'][0][1][0],
+      ['my_id', {'meta_type': 'ProxyField'}]
+    )
+    self.assertEqual(
+      result_dict['_embedded']['_view']['_embedded']['form_definition']['pt'],
+      'form_view'
+    )
 
     self.assertEqual(result_dict['_embedded']['_view']['_actions']['put']['href'], '%s/web_site_module/hateoas/%s/Base_edit' % (
                                                                                      self.portal.absolute_url(),
@@ -757,9 +769,42 @@ class TestERP5Document_getHateoas_mode_traverse(ERP5HALJSONStyleSkinsMixin):
 
     self.assertEqual(result_dict['_embedded']['_view']['_links']['form_definition']['href'], 'urn:jio:get:portal_skins/erp5_ui_test/Foo_view')
     self.assertEqual(result_dict['_embedded']['_view']['_links']['form_definition']['name'], 'Foo_view')
+    self.assertEqual(
+      result_dict['_embedded']['_view']['_embedded']['form_definition']['group_list'][0][0],
+      'left'
+    )
+    self.assertEqual(
+      result_dict['_embedded']['_view']['_embedded']['form_definition']['group_list'][0][1][0],
+      ['my_id', {'meta_type': 'ProxyField'}]
+    )
+    self.assertEqual(
+      result_dict['_embedded']['_view']['_embedded']['form_definition']['pt'],
+      'form_view'
+    )
 
     self.assertFalse(result_dict['_embedded']['_view'].has_key('_actions'))
 
+
+  @simulate('Base_getRequestHeader', '*args, **kwargs',
+            'return "application/hal+json"')
+  @createIndexedDocument()
+  @changeSkin('Hal')
+  def test_getHateoasForm_dialog_constants(self, document):
+    fake_request = do_fake_request("GET")
+
+    result = self.portal.web_site_module.hateoas.ERP5Document_getHateoas(
+      REQUEST=fake_request, mode="traverse", relative_url="portal_skins/erp5_ui_test/Foo_viewDummyDialog")
+
+    self.assertEquals(fake_request.RESPONSE.status, 200)
+    self.assertEquals(fake_request.RESPONSE.getHeader('Content-Type'),
+      "application/hal+json"
+    )
+    result_dict = json.loads(result)
+    _, group_fields = result_dict['group_list'][-1]
+    field_names = [field_name for field_name, _ in group_fields]
+    self.assertIn("form_id", field_names)
+    self.assertIn("dialog_id", field_names)
+    # no need for dialog_method because that one is hardcoded in javascript
 
   @simulate('Base_getRequestUrl', '*args, **kwargs',
       'return "http://example.org/bar"')
@@ -868,6 +913,18 @@ class TestERP5Document_getHateoas_mode_traverse(ERP5HALJSONStyleSkinsMixin):
 
     self.assertEqual(result_dict['_embedded']['_view']['report_section_list'][1]['_links']['form_definition']['href'], 'urn:jio:get:portal_skins/erp5_core/Base_viewWorkflowHistory')
     self.assertEqual(result_dict['_embedded']['_view']['report_section_list'][1]['_links']['form_definition']['name'], 'Base_viewWorkflowHistory')
+    self.assertEqual(
+      result_dict['_embedded']['_view']['_embedded']['form_definition']['group_list'][0][0],
+      'center'
+    )
+    self.assertEqual(
+      result_dict['_embedded']['_view']['_embedded']['form_definition']['group_list'][0][1][0],
+      ['your_zodb_history', {'meta_type': 'LinkField'}]
+    )
+    self.assertEqual(
+      result_dict['_embedded']['_view']['_embedded']['form_definition']['pt'],
+      'report_view'
+    )
 
     self.assertSameSet(result_dict['_embedded']['_view']['report_section_list'][1]['listbox']['default_params'].keys(), ['checked_permission', 'ignore_unknown_columns', 'workflow_id', 'workflow_title'])
     self.assertTrue(result_dict['_embedded']['_view']['report_section_list'][1]['listbox']['default_params']['ignore_unknown_columns'])
@@ -888,7 +945,7 @@ class TestERP5Document_getHateoas_mode_traverse(ERP5HALJSONStyleSkinsMixin):
     self.assertEqual(result_dict['_embedded']['_view']['report_section_list'][1]['listbox']['editable_column_list'], [['time', 'Time'], ['comment', 'Comment'], ['error_message', 'Error Message']])
     self.assertEqual(result_dict['_embedded']['_view']['report_section_list'][1]['listbox']['sort_column_list'], [])
     self.assertEqual(result_dict['_embedded']['_view']['report_section_list'][1]['listbox']['list_method_template'],
-                     '%s/web_site_module/hateoas/ERP5Document_getHateoas?mode=search&relative_url=foo_module%%2F%s&form_relative_url=portal_skins/erp5_core/Base_viewWorkflowHistory/listbox&list_method=Base_getWorkflowHistoryItemList&default_param_json=eyJ3b3JrZmxvd19pZCI6ICJmb29fd29ya2Zsb3ciLCAiY2hlY2tlZF9wZXJtaXNzaW9uIjogIlZpZXciLCAid29ya2Zsb3dfdGl0bGUiOiAiRm9vIFdvcmtmbG93IiwgImlnbm9yZV91bmtub3duX2NvbHVtbnMiOiB0cnVlfQ=={&query,select_list*,limit*,sort_on*,local_roles*,selection_domain*}' % (self.portal.absolute_url(), document.getId()))
+                     '%s/web_site_module/hateoas/ERP5Document_getHateoas?mode=search&relative_url=foo_module%%2F%s&form_relative_url=portal_skins/erp5_core/Base_viewWorkflowHistory/listbox&list_method=Base_getWorkflowHistoryItemList&extra_param_json=eyJmb3JtX2lkIjogIkJhc2Vfdmlld1dvcmtmbG93SGlzdG9yeSJ9&default_param_json=eyJ3b3JrZmxvd19pZCI6ICJmb29fd29ya2Zsb3ciLCAiY2hlY2tlZF9wZXJtaXNzaW9uIjogIlZpZXciLCAid29ya2Zsb3dfdGl0bGUiOiAiRm9vIFdvcmtmbG93IiwgImlnbm9yZV91bmtub3duX2NvbHVtbnMiOiB0cnVlfQ=={&query,select_list*,limit*,sort_on*,local_roles*,selection_domain*}' % (self.portal.absolute_url(), document.getId()))
 
 
   @simulate('Base_getRequestUrl', '*args, **kwargs',
@@ -936,8 +993,9 @@ class TestERP5Document_getHateoas_mode_traverse(ERP5HALJSONStyleSkinsMixin):
     self.assertEqual(result_dict['pt'], 'form_view')
     self.assertEqual(result_dict['action'], 'Base_edit')
     self.assertEqual(result_dict['group_list'][0][0], 'left')
-    self.assertEqual(result_dict['group_list'][0][1][0], ['my_id', {'meta_type': 'StringField'}])
+    self.assertEqual(result_dict['group_list'][0][1][0], ['my_id', {'meta_type': 'ProxyField'}])
     self.assertEqual(result_dict['_debug'], "traverse")
+
 
 class TestERP5Document_getHateoas_mode_search(ERP5HALJSONStyleSkinsMixin):
 
@@ -1182,11 +1240,259 @@ return context.getPortalObject().foo_module.contentValues()
     )
     result_dict = json.loads(result)
     #editalble creation date is defined at proxy form
-    self.assertEqual(result_dict['_embedded']['contents'][0]['creation_date']['type'], 'DateTimeField')
-    self.assertEqual(result_dict['_embedded']['contents'][0]['modification_date']['type'], 'DateTimeField')
+    # Test the listbox_uid parameter
+    self.assertEqual(result_dict['_embedded']['contents'][0]['listbox_uid:list']['key'], 'listbox_uid:list')
+    self.assertEqual(result_dict['_embedded']['contents'][0]['creation_date']['field_gadget_param']['type'], 'DateTimeField')
+    self.assertEqual(result_dict['_embedded']['contents'][0]['modification_date']['field_gadget_param']['type'], 'DateTimeField')
     # There is a count method on this listbox
     self.assertEqual(result_dict['_embedded']['count'], 0)
 
+  @simulate('Base_getRequestUrl', '*args, **kwargs',
+      'return "http://example.org/bar"')
+  @simulate('Base_getRequestHeader', '*args, **kwargs',
+            'return "application/hal+json"')
+  @simulate('Test_listProducts', '*args, **kwargs', """
+return context.getPortalObject().foo_module.contentValues()
+""")
+  @simulate('Base_getUrl', 'url_dict=False, *args, **kwargs', """
+if url_dict:
+  jio_key = context.getRelativeUrl()
+  return {
+    'command': 'push_history',
+    'options': {
+      'jio_key': jio_key,
+      'editable': False
+    },
+    'view_kw': {
+      'view': 'metadata',
+      'jio_key': jio_key,
+      'extra_param_json': {'reset': 1},
+    }
+  }
+return '%s/Base_viewMetadata?reset:int=1' % context.getRelativeUrl()
+""")
+  @changeSkin('Hal')
+  def test_getHateoasDocument_listbox_check_url_column_different_view(self):
+    # pass custom list method which expect input arguments
+    self.portal.foo_module.FooModule_viewFooList.listbox.ListBox_setPropertyList(
+      field_url_columns = ['modification_date | Base_getUrl',])
+
+    fake_request = do_fake_request("GET")
+    result = self.portal.web_site_module.hateoas.ERP5Document_getHateoas(
+                  REQUEST=fake_request,
+                  mode="search",
+                  list_method='Test_listProducts',
+                  select_list=['id', 'title', 'creation_date', 'modification_date'],
+                  form_relative_url='portal_skins/erp5_ui_test/FooModule_viewFooList/listbox')
+    result_dict = json.loads(result)
+
+    # Test the listbox_uid parameter
+    self.assertEqual(result_dict['_embedded']['contents'][0]['listbox_uid:list']['key'], 'listbox_uid:list')
+
+    # Test the URL value
+    self.assertEqual(result_dict['_embedded']['contents'][0]['modification_date']['url_value']['command'], 'push_history')
+    self.assertEqual(result_dict['_embedded']['contents'][0]['modification_date']['url_value']['options']['jio_key'], self.portal.foo_module.contentValues()[0].getRelativeUrl())
+    self.assertEqual(result_dict['_embedded']['contents'][0]['modification_date']['url_value']['options']['editable'], False)
+    self.assertIn('metadata', result_dict['_embedded']['contents'][0]['modification_date']['url_value']['options']['view'])
+    self.assertIn('extra_param_json', result_dict['_embedded']['contents'][0]['modification_date']['url_value']['options']['view'])
+    self.assertIn(self.portal.foo_module.contentValues()[0].getRelativeUrl().replace("/", "%2F"), result_dict['_embedded']['contents'][0]['modification_date']['url_value']['options']['view'])
+
+    # Test the field_gadget_param
+    self.assertTrue(result_dict['_embedded']['contents'][0]['modification_date']['field_gadget_param'])
+    self.assertEqual(result_dict['_embedded']['contents'][0]['modification_date']['field_gadget_param']['type'], 'DateTimeField')
+
+    # Reset the url_columns of the listbox
+    self.portal.foo_module.FooModule_viewFooList.listbox.ListBox_setPropertyList(
+      field_url_columns = '')
+
+    self.assertEqual(result_dict['_embedded']['count'], 1)
+
+  @simulate('Base_getRequestUrl', '*args, **kwargs',
+      'return "http://example.org/bar"')
+  @simulate('Base_getRequestHeader', '*args, **kwargs',
+            'return "application/hal+json"')
+  @simulate('Base_getUrl', 'url_dict=False, *args, **kwargs', """
+url =  "https://officejs.com"
+if url_dict:
+  return {'command': 'raw',
+          'options': {
+            'url': url
+            }
+    }
+return url
+""")
+  @changeSkin('Hal')
+  def test_getHateoasDocument_listbox_check_url_column_absolute_url_with_field_rendering(self):
+    # pass custom list method which expect input arguments
+    self.portal.foo_module.FooModule_viewFooList.listbox.ListBox_setPropertyList(
+      field_url_columns = ['modification_date | Base_getUrl',])
+
+    fake_request = do_fake_request("GET")
+    result = self.portal.web_site_module.hateoas.ERP5Document_getHateoas(
+                  REQUEST=fake_request,
+                  mode="search",
+                  list_method='objectValues',
+                  select_list=['id', 'title', 'creation_date', 'modification_date'],
+                  form_relative_url='portal_skins/erp5_ui_test/FooModule_viewFooList/listbox')
+    result_dict = json.loads(result)
+
+    # Test the listbox_uid parameter
+    self.assertEqual(result_dict['_embedded']['contents'][0]['listbox_uid:list']['key'], 'listbox_uid:list')
+
+    # Test the URL value
+    self.assertEqual(result_dict['_embedded']['contents'][0]['modification_date']['url_value']['command'], 'raw')
+    self.assertEqual(result_dict['_embedded']['contents'][0]['modification_date']['url_value']['options']['url'], 'https://officejs.com')
+
+    # Test the field_gadget_param
+    self.assertTrue(result_dict['_embedded']['contents'][0]['modification_date']['field_gadget_param'])
+    self.assertEqual(result_dict['_embedded']['contents'][0]['modification_date']['field_gadget_param']['type'], 'DateTimeField')
+
+    # Reset the url_columns of the listbox
+    self.portal.foo_module.FooModule_viewFooList.listbox.ListBox_setPropertyList(
+      field_url_columns = '')
+
+  @simulate('Base_getRequestUrl', '*args, **kwargs',
+      'return "http://example.org/bar"')
+  @simulate('Base_getRequestHeader', '*args, **kwargs',
+            'return "application/hal+json"')
+  @simulate('Test_listProducts', '*args, **kwargs', """
+return context.getPortalObject().foo_module.contentValues()
+""")
+  @simulate('Base_getUrl', 'url_dict=False, *args, **kwargs', """
+url =  "https://officejs.com"
+if url_dict:
+  return {'command': 'raw',
+          'options': {
+            'url': url
+            }
+    }
+return url
+""")
+  @changeSkin('Hal')
+  def test_getHateoasDocument_listbox_check_url_column_absolute_url_without_field_rendering(self):
+    # pass custom list method which expect input arguments
+    self.portal.foo_module.FooModule_viewFooList.listbox.ListBox_setPropertyList(
+      field_url_columns = ['title | Base_getUrl',])
+
+    fake_request = do_fake_request("GET")
+    result = self.portal.web_site_module.hateoas.ERP5Document_getHateoas(
+                  REQUEST=fake_request,
+                  mode="search",
+                  list_method='Test_listProducts',
+                  select_list=['id', 'title', 'creation_date', 'modification_date'],
+                  form_relative_url='portal_skins/erp5_ui_test/FooModule_viewFooList/listbox')
+    result_dict = json.loads(result)
+
+    # Test the listbox_uid parameter
+    self.assertEqual(result_dict['_embedded']['contents'][0]['listbox_uid:list']['key'], 'listbox_uid:list')
+
+    # Test the URL value
+    self.assertEqual(result_dict['_embedded']['contents'][0]['title']['url_value']['command'], 'raw')
+    self.assertEqual(result_dict['_embedded']['contents'][0]['title']['url_value']['options']['url'], 'https://officejs.com')
+
+    # Test if the value of the column is with right key
+    self.assertTrue(result_dict['_embedded']['contents'][0]['title']['default'])
+
+    # Test if the field_gadget_param even if there is no url_value
+    self.assertTrue(result_dict['_embedded']['contents'][0]['modification_date']['field_gadget_param'])
+    self.assertEqual(result_dict['_embedded']['contents'][0]['modification_date']['field_gadget_param']['type'], 'DateTimeField')
+
+    # Test that creation_date doesn't has `url_value` dict in it
+    self.assertNotIn('url_value', result_dict['_embedded']['contents'][0]['modification_date'])
+
+    # Reset the url_columns of the listbox
+    self.portal.foo_module.FooModule_viewFooList.listbox.ListBox_setPropertyList(
+      field_url_columns = '')
+
+  @simulate('Base_getRequestUrl', '*args, **kwargs',
+      'return "http://example.org/bar"')
+  @simulate('Base_getRequestHeader', '*args, **kwargs',
+            'return "application/hal+json"')
+  @simulate('Test_listProducts', '*args, **kwargs', """
+return context.getPortalObject().foo_module.contentValues()
+""")
+  @changeSkin('Hal')
+  def test_getHateoasDocument_listbox_check_url_column_no_url(self):
+    # pass custom list method which expect input arguments
+    self.portal.foo_module.FooModule_viewFooList.listbox.ListBox_setPropertyList(
+      field_url_columns = ['title|',])
+
+    fake_request = do_fake_request("GET")
+    result = self.portal.web_site_module.hateoas.ERP5Document_getHateoas(
+                  REQUEST=fake_request,
+                  mode="search",
+                  list_method='Test_listProducts',
+                  select_list=['id', 'title', 'creation_date', 'modification_date'],
+                  form_relative_url='portal_skins/erp5_ui_test/FooModule_viewFooList/listbox')
+    result_dict = json.loads(result)
+
+    # Test the listbox_uid parameter
+    self.assertEqual(result_dict['_embedded']['contents'][0]['listbox_uid:list']['key'], 'listbox_uid:list')
+
+    # Test the URL value
+    self.assertEqual(result_dict['_embedded']['contents'][0]['title']['url_value'], {})
+
+    # Test if the value of the column is with right key
+    self.assertTrue(result_dict['_embedded']['contents'][0]['title']['default'])
+
+    # Reset the url_columns of the listbox
+    self.portal.foo_module.FooModule_viewFooList.listbox.ListBox_setPropertyList(
+      field_url_columns = '')
+
+  @simulate('Base_getRequestUrl', '*args, **kwargs',
+      'return "http://example.org/bar"')
+  @simulate('Base_getRequestHeader', '*args, **kwargs',
+            'return "application/hal+json"')
+  @simulate('Test_listProducts', '*args, **kwargs', """
+return context.getPortalObject().foo_module.contentValues()
+""")
+  @simulate('Base_getUrl', 'url_dict=False, *args, **kwargs', """
+url =  "https://officejs.com"
+if url_dict:
+  return {'command': 'raw',
+          'options': {
+            'url': url,
+            'reset': 1
+            }
+    }
+return url
+""")
+  @changeSkin('Hal')
+  def test_getHateoasDocument_listbox_check_url_column_option_parameters(self):
+    # pass custom list method which expect input arguments
+    self.portal.foo_module.FooModule_viewFooList.listbox.ListBox_setPropertyList(
+      field_url_columns = ['title | Base_getUrl',])
+
+    fake_request = do_fake_request("GET")
+    result = self.portal.web_site_module.hateoas.ERP5Document_getHateoas(
+                  REQUEST=fake_request,
+                  mode="search",
+                  list_method='Test_listProducts',
+                  select_list=['id', 'title', 'creation_date', 'modification_date'],
+                  form_relative_url='portal_skins/erp5_ui_test/FooModule_viewFooList/listbox')
+    result_dict = json.loads(result)
+
+    # Test the listbox_uid parameter
+    self.assertEqual(result_dict['_embedded']['contents'][0]['listbox_uid:list']['key'], 'listbox_uid:list')
+
+    # Test the URL value
+    self.assertEqual(result_dict['_embedded']['contents'][0]['title']['url_value']['command'], 'raw')
+    self.assertEqual(result_dict['_embedded']['contents'][0]['title']['url_value']['options'].keys(), [u'url', u'reset'])
+    self.assertEqual(result_dict['_embedded']['contents'][0]['title']['url_value']['options']['url'], 'https://officejs.com')
+
+    # Test if the value of the column is with right key
+    self.assertTrue(result_dict['_embedded']['contents'][0]['title']['default'])
+
+    # Test if the field_gadget_param even if there is no url_value
+    self.assertTrue(result_dict['_embedded']['contents'][0]['modification_date']['field_gadget_param'])
+    self.assertEqual(result_dict['_embedded']['contents'][0]['modification_date']['field_gadget_param']['type'], 'DateTimeField')
+
+    # Test that creation_date doesn't has `url_value` dict in it
+    self.assertNotIn('url_value', result_dict['_embedded']['contents'][0]['modification_date'])
+
+    # Reset the url_columns of the listbox
+    self.portal.foo_module.FooModule_viewFooList.listbox.ListBox_setPropertyList(
+      field_url_columns = '')
 
   @simulate('Base_getRequestUrl', '*args, **kwargs', 'return "http://example.org/bar"')
   @simulate('Base_getRequestHeader', '*args, **kwargs', 'return "application/hal+json"')
@@ -1210,6 +1516,7 @@ return context.getPortalObject().portal_catalog(portal_type='Foo', sort_on=[('id
     Practically, because we code in python, it can be any object.
     """
     fake_request = do_fake_request("GET")
+    document_list = sorted(document_list, key=lambda d: d.getId())
     result = self.portal.web_site_module.hateoas.ERP5Document_getHateoas(
       REQUEST=fake_request,
       mode="search",
@@ -1241,14 +1548,35 @@ return context.getPortalObject().portal_catalog(portal_type='Foo', sort_on=[('id
     )
     result_dict = json.loads(result)
     self.assertEqual(2, len(result_dict['_embedded']['contents']))
-    self.assertIn("field_listbox", result_dict['_embedded']['contents'][0]['id']['key'])
-    self.assertEqual("StringField", result_dict['_embedded']['contents'][0]['id']['type'])
-    self.assertEqual(document_list[0].getId(), result_dict['_embedded']['contents'][0]['id']['default'])
-    self.assertIn("field_listbox", result_dict['_embedded']['contents'][1]['id']['key'])
-    self.assertEqual("StringField", result_dict['_embedded']['contents'][1]['id']['type'])
-    self.assertEqual(document_list[1].getId(), result_dict['_embedded']['contents'][1]['id']['default'])
+    # Test the listbox_uid parameter
+    self.assertEqual(result_dict['_embedded']['contents'][0]['listbox_uid:list']['key'], 'listbox_uid:list')
+    self.assertIn("field_listbox", result_dict['_embedded']['contents'][0]['id']['field_gadget_param']['key'])
+    self.assertEqual("StringField", result_dict['_embedded']['contents'][0]['id']['field_gadget_param']['type'])
+    self.assertEqual(document_list[0].getId(), result_dict['_embedded']['contents'][0]['id']['field_gadget_param']['default'])
+    self.assertIn("field_listbox", result_dict['_embedded']['contents'][1]['id']['field_gadget_param']['key'])
+    self.assertEqual("StringField", result_dict['_embedded']['contents'][1]['id']['field_gadget_param']['type'])
+    self.assertEqual(document_list[1].getId(), result_dict['_embedded']['contents'][1]['id']['field_gadget_param']['default'])
     # There is a count method on the listbox
     self.assertEqual(result_dict['_embedded']['count'], 0)
+
+
+    # Render a Document without using Form Field template ('reference')
+    result = self.portal.web_site_module.hateoas.ERP5Document_getHateoas(
+      REQUEST=fake_request,
+      mode="search",
+      local_roles=["Assignor", "Assignee"],
+      list_method='Test_listProducts',
+      select_list=['reference'],
+      form_relative_url='portal_skins/erp5_ui_test/FooModule_viewFooList/listbox'
+    )
+    result_dict = json.loads(result)
+    self.assertEqual(2, len(result_dict['_embedded']['contents']))
+    # Test the listbox_uid parameter
+    self.assertEqual(result_dict['_embedded']['contents'][0]['listbox_uid:list']['key'], 'listbox_uid:list')
+    self.assertEqual(document_list[0].getReference(), result_dict['_embedded']['contents'][0]['reference'].encode('UTF-8'))
+    # There is a count method on the listbox
+    self.assertEqual(result_dict['_embedded']['count'], 0)
+
 
     # Test rendering without form template of attribute, getterm and a script
     result = self.portal.web_site_module.hateoas.ERP5Document_getHateoas(
@@ -1283,6 +1611,8 @@ return context.getPortalObject().portal_catalog(portal_type='Foo', sort_on=[('id
     """Test that count method also uses the query parameters.
     """
     fake_request = do_fake_request("GET")
+    # Reset the listbox
+    self.portal.foo_module.FooModule_viewFooList.listbox.ListBox_setPropertyList()
     result = self.portal.web_site_module.hateoas.ERP5Document_getHateoas(
       REQUEST=fake_request,
       mode="search",
@@ -1325,6 +1655,60 @@ return context.getPortalObject().portal_catalog(portal_type='Foo', sort_on=[('id
     self.assertEqual(len(result_dict['_embedded']['contents']), 1)
     self.assertEqual(result_dict['_embedded']['count'], 1)
 
+  @simulate('Base_getRequestUrl', '*args, **kwargs', 'return "http://example.org/bar"')
+  @simulate('Base_getRequestHeader', '*args, **kwargs', 'return "application/hal+json"')
+  @createIndexedDocument(quantity=2)
+  @changeSkin('Hal')
+  def test_getHateoas_length_as_count_method(self, document_list):
+    """Test that erp5 listbox manually count result length.
+    """
+    fake_request = do_fake_request("GET")
+    # Reset the listbox
+    # self.portal.foo_module.FooModule_viewFooList.listbox.ListBox_setPropertyList()
+    self.portal.foo_module.FooModule_viewFooList.listbox.ListBox_setPropertyList(
+      field_count_method = '')
+
+    result = self.portal.web_site_module.hateoas.ERP5Document_getHateoas(
+      REQUEST=fake_request,
+      mode="search",
+      relative_url='foo_module',
+      list_method="searchFolder",
+      form_relative_url='portal_skins/erp5_ui_test/FooModule_viewFooList/listbox'
+    )
+    result_dict = json.loads(result)
+    self.assertEqual(len(result_dict['_embedded']['contents']), 2)
+    self.assertEqual(result_dict['_embedded']['count'], 2)
+
+    # Check that limiting the number of result doesn't impact count
+    fake_request = do_fake_request("GET")
+    result = self.portal.web_site_module.hateoas.ERP5Document_getHateoas(
+      REQUEST=fake_request,
+      mode="search",
+      relative_url='foo_module',
+      list_method="searchFolder",
+      query='portal_type:"Foo"',
+      limit=1,
+      form_relative_url='portal_skins/erp5_ui_test/FooModule_viewFooList/listbox'
+    )
+    result_dict = json.loads(result)
+    # There is a count method on this listbox
+    self.assertEqual(len(result_dict['_embedded']['contents']), 1)
+    self.assertEqual(result_dict['_embedded']['count'], 2)
+
+    # Check that query parameters are passed to the count method
+    fake_request = do_fake_request("GET")
+    result = self.portal.web_site_module.hateoas.ERP5Document_getHateoas(
+      REQUEST=fake_request,
+      mode="search",
+      relative_url='foo_module',
+      list_method="searchFolder",
+      query='id:"%s"' % self.portal.foo_module.contentIds()[0],
+      form_relative_url='portal_skins/erp5_ui_test/FooModule_viewFooList/listbox'
+    )
+    result_dict = json.loads(result)
+    # There is a count method on this listbox
+    self.assertEqual(len(result_dict['_embedded']['contents']), 1)
+    self.assertEqual(result_dict['_embedded']['count'], 1)
 
 class TestERP5Person_getHateoas_mode_search(ERP5HALJSONStyleSkinsMixin):
   """Test HAL_JSON operations on cataloged Persons and other allowed content types of Person Module."""
@@ -1448,6 +1832,28 @@ return portal.portal_simulation.getInventoryList(section_uid=context.getUid())
     self.assertEqual(result_dict['_embedded'].get('count', None), None)
 
 
+class TestERP5Document_getHateoas_mode_form(ERP5HALJSONStyleSkinsMixin):
+
+  @simulate('Base_getRequestHeader', '*args, **kwargs',
+            'return "application/hal+json"')
+  @createIndexedDocument()
+  @changeSkin('Hal')
+  def test_getHateoasForm_message(self, document):
+    fake_request = do_fake_request("POST")
+
+    result = self.portal.web_site_module.hateoas.ERP5Document_getHateoas(
+      REQUEST=fake_request, mode="form", relative_url=document.getRelativeUrl(),
+      form=getattr(document, 'Foo_view'), portal_status_message="Couscous", portal_status_level='error')
+
+    self.assertEquals(fake_request.RESPONSE.status, 200)
+    self.assertEquals(fake_request.RESPONSE.getHeader('Content-Type'),
+      "application/hal+json"
+    )
+    result_dict = json.loads(result)
+    self.assertEqual(result_dict["_notification"]["status"], "error")
+    self.assertEqual(result_dict["_notification"]["message"], "Couscous")
+
+
 class TestERP5Document_getHateoas_mode_bulk(ERP5HALJSONStyleSkinsMixin):
 
   @simulate('Base_getRequestHeader', '*args, **kwargs',
@@ -1500,7 +1906,7 @@ class TestERP5Document_getHateoas_mode_bulk(ERP5HALJSONStyleSkinsMixin):
     self.assertEqual(result_dict['result_list'][0]['_links']['action_object_view'][0]['name'], "view")
 
     self.assertEqual(result_dict['result_list'][0]['_links']['action_workflow'][0]['href'],
-                     "%s/web_site_module/hateoas/ERP5Document_getHateoas?mode=traverse&relative_url=%s&view=custom_action_no_dialog&form_id=Foo_view" % (
+                     "%s/web_site_module/hateoas/ERP5Document_getHateoas?mode=traverse&relative_url=%s&view=custom_action_no_dialog&extra_param_json=eyJmb3JtX2lkIjogIkZvb192aWV3In0=" % (
                        self.portal.absolute_url(),
                        urllib.quote_plus(document.getRelativeUrl())))
     self.assertEqual(result_dict['result_list'][0]['_links']['action_workflow'][0]['title'], "Custom Action No Dialog")
@@ -1513,7 +1919,7 @@ class TestERP5Document_getHateoas_mode_bulk(ERP5HALJSONStyleSkinsMixin):
     self.assertEqual(result_dict['result_list'][0]['_links']['site_root']['name'], self.portal.web_site_module.hateoas.getTitle())
 
     self.assertEqual(result_dict['result_list'][0]['_links']['action_object_new_content_action']['href'],
-                     "%s/web_site_module/hateoas/ERP5Document_getHateoas?mode=traverse&relative_url=%s&view=create_a_document&form_id=Foo_view" % (
+                     "%s/web_site_module/hateoas/ERP5Document_getHateoas?mode=traverse&relative_url=%s&view=create_a_document&extra_param_json=eyJmb3JtX2lkIjogIkZvb192aWV3In0=" % (
                        self.portal.absolute_url(),
                        urllib.quote_plus(document.getRelativeUrl())))
     self.assertEqual(result_dict['result_list'][0]['_links']['action_object_new_content_action']['title'], "Create a Document")
@@ -1551,6 +1957,18 @@ class TestERP5Document_getHateoas_mode_bulk(ERP5HALJSONStyleSkinsMixin):
 
     self.assertEqual(result_dict['result_list'][0]['_embedded']['_view']['_links']['form_definition']['href'], 'urn:jio:get:portal_skins/erp5_ui_test/Foo_view')
     self.assertEqual(result_dict['result_list'][0]['_embedded']['_view']['_links']['form_definition']['name'], 'Foo_view')
+    self.assertEqual(
+      result_dict['result_list'][0]['_embedded']['_view']['_embedded']['form_definition']['group_list'][0][0],
+      'left'
+    )
+    self.assertEqual(
+      result_dict['result_list'][0]['_embedded']['_view']['_embedded']['form_definition']['group_list'][0][1][0],
+      ['my_id', {'meta_type': 'ProxyField'}]
+    )
+    self.assertEqual(
+      result_dict['result_list'][0]['_embedded']['_view']['_embedded']['form_definition']['pt'],
+      'form_view'
+    )
 
     self.assertEqual(result_dict['result_list'][0]['_embedded']['_view']['_actions']['put']['href'], '%s/web_site_module/hateoas/%s/Base_edit' % (
                                                                                      self.portal.absolute_url(),
@@ -1744,6 +2162,7 @@ class TestERP5Action_getHateoas(ERP5HALJSONStyleSkinsMixin):
       REQUEST=fake_request,
       dialog_method='Foo_doNothing',  # 'Workflow_statusModify' would lead us by a different path in the code
       dialog_id='Foo_viewCustomWorkflowRequiredActionDialog',
+      form_id='Foo_view'
     )
     self.assertEqual(fake_request.RESPONSE.status, 400)
 

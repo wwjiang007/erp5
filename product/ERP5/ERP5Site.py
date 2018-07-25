@@ -266,6 +266,17 @@ class ERP5Site(FolderMixIn, CMFSite, CacheCookieMixin):
   security = ClassSecurityInfo()
   security.declareObjectProtected(Permissions.AccessContentsInformation)
 
+  security.declarePublic('isSubtreeIndexable')
+  def isSubtreeIndexable(self):
+    """
+    Allow a container to preempt indexability of its content, without having
+    to set "isIndexable = False" on (at minimum) its immediate children.
+
+    The meaning of calling this method on an instance where
+    isAncestryIndexable returns False is undefined.
+    """
+    return self.isIndexable
+
   def __before_publishing_traverse__(self, self2, request):
     request.RESPONSE.realm = None
     return super(ERP5Site, self).__before_publishing_traverse__(self2, request)
@@ -286,7 +297,8 @@ class ERP5Site(FolderMixIn, CMFSite, CacheCookieMixin):
       pref = preference_tool.newContent(id, portal_type,
         priority=Priority.SITE, title='Default ' + portal_type)
       pref.enable()
-    pref.setPreferredDocumentConversionServerUrl(cloudooo_url)
+    cloudooo_url = cloudooo_url.split(',')
+    pref.setPreferredDocumentConversionServerUrlList(cloudooo_url)
 
   def _createInitialSiteManager(self):
     # This section of code is inspired by
@@ -1248,6 +1260,14 @@ class ERP5Site(FolderMixIn, CMFSite, CacheCookieMixin):
                   'portal_balance_transaction_line_type_list')
 
   security.declareProtected(Permissions.AccessContentsInformation,
+                            'getPortalDomainTypeList')
+  def getPortalDomainTypeList(self):
+    """
+      Return domain types.
+    """
+    return self._getPortalGroupedTypeList('domain')
+
+  security.declareProtected(Permissions.AccessContentsInformation,
                             'getPortalCurrentInventoryStateList')
   def getPortalCurrentInventoryStateList(self):
     """
@@ -1920,16 +1940,17 @@ class ERP5Generator(PortalGenerator):
 
     p._v_bootstrapping = False
 
-    # XXX: Is it useful to wait for indexing before using upgradeSite ?
-    after_method_id = 'immediateReindexObject'
+    reindex_all_tag = 'ERP5Site_reindexAll'
+    upgrade_tag = 'updgradeSite'
+    preference_tag = 'initSystemPreference'
     if bt5_repository_url:
-      p.portal_templates.repository_dict = dict.fromkeys(
-        bt5_repository_url.split())
+      p.portal_templates.repository_dict = dict.fromkeys(bt5_repository_url.split())
       if bt5:
-        method_id = 'upgradeSite'
-        getattr(p.portal_templates.activate(after_method_id=after_method_id),
-                method_id)(bt5.split(), update_catalog=True)
-        after_method_id = method_id
+        p.portal_templates.activate(
+          # XXX: Is it useful to wait for indexing ?
+          after_tag=reindex_all_tag,
+          tag=upgrade_tag,
+        ).upgradeSite(bt5.split(), update_catalog=True)
     if id_store_interval != '':
       id_store_interval = int(id_store_interval)
       if id_store_interval < 0:
@@ -1941,22 +1962,17 @@ class ERP5Generator(PortalGenerator):
       else:
         ob._setStoredInZodb(0)
     if cloudooo_url:
-      method_id = '_initSystemPreference'
-      getattr(p.portal_activities.activateObject(p,
-        after_method_id=after_method_id), method_id)(cloudooo_url=cloudooo_url)
-      after_method_id = method_id
+      p.portal_activities.activateObject(
+        p,
+        after_tag=(reindex_all_tag, upgrade_tag),
+        tag=preference_tag,
+      )._initSystemPreference(cloudooo_url=cloudooo_url)
     id_ = 'isPortalBeingCreated'
     setattr(p, id_, ConstantGetter(id_, value=True))
-    # XXX: ERP5Site_reindexAll should be reviewed so that one can depend on a
-    #      final tag. A more general approach is to have an activity dependency
-    #      to anything, so that _delPropValue is called as soon as activity
-    #      nodes have nothing else to do.
-    after_method_id = tuple({after_method_id}.union(('Folder_reindexAll',
-      'Folder_reindexObjectList', 'InventoryModule_reindexMovementList',
-      'immediateReindexObject', 'recursiveImmediateReindexObject', 'SQLCatalog_deferFullTextIndexActivity')))
-    p.portal_activities.activateObject(p, after_method_id=after_method_id,
-      )._delPropValue(id_)
-
+    p.portal_activities.activateObject(
+      p,
+      after_tag=(reindex_all_tag, upgrade_tag, preference_tag),
+    )._delPropValue(id_)
     return p
 
   @classmethod
@@ -2205,13 +2221,16 @@ class ERP5Generator(PortalGenerator):
   def setupIndex(self, p, **kw):
     # Make sure all tools and folders have been indexed
     if kw.get('reindex', 1):
-      setattr(p, 'isIndexable', ConstantGetter('isIndexable', value=True))
+      delattr(p, 'isIndexable')
       # Clear portal ids sql table, like this we do not take
       # ids for a previously created web site
       p.portal_ids.clearGenerator(all=True)
-      # Then clear the catalog and reindex it
-      p.portal_catalog.manage_catalogClear()
-      # Calling ERP5Site_reindexAll is useless.
+      # Calling ERP5Site_reindexAll is important, as some needed indexation
+      # activities may have been skipped (not spawned) while portal was tagged
+      # as non-indexable. Maybe not spawning these activities is a bug, in
+      # which case some bootstrap tricks are needed until portal_activities
+      # becomes available.
+      p.ERP5Site_reindexAll(clear_catalog=True)
 
   def setupUserFolder(self, p):
       # Use Pluggable Auth Service instead of the standard acl_users.

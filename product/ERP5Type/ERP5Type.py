@@ -309,6 +309,8 @@ class ERP5TypeInformation(XMLObject,
       'personal_item',
       # Base
       'entity', 'login',
+      # Core
+      'domain',
       # Wendelin
       'device',
       'device_configuration',
@@ -452,7 +454,7 @@ class ERP5TypeInformation(XMLObject,
         #   (activities). Or just not request immediate indexation.
         # - if ImmediateReindexContextManager is used, anything until
         #   context manager exits.
-        method = ob.recursiveImmediateReindexObject
+        method = ob._reindexOnCreation
         if reindex_kw is not None:
           method = partial(method, **reindex_kw)
         if isinstance(immediate_reindex, ImmediateReindexContextManager):

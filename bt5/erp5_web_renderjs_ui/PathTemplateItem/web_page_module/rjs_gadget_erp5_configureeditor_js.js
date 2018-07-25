@@ -49,7 +49,7 @@
     .declareAcquiredMethod("redirect", "redirect")
     .declareAcquiredMethod("trigger", "trigger")
 
-    .onStateChange(function () {
+    .onStateChange(function onStateChange() {
       var gadget = this,
         div = document.createElement("div"),
         container = gadget.element.querySelector(".container");
@@ -83,7 +83,7 @@
         });
     })
 
-    .declareMethod('render', function (options) {
+    .declareMethod('render', function render(options) {
       return this.changeState({
         column_list: options.column_list,
         displayable_column_list: options.displayable_column_list,
@@ -91,7 +91,7 @@
       });
     })
 
-    .onEvent('click', function (evt) {
+    .onEvent('click', function click(evt) {
       var gadget = this,
         container;
 
@@ -112,8 +112,8 @@
         evt.preventDefault();
         return createColumnItemTemplate(gadget, undefined, gadget.state.displayable_column_list)
           .push(function (template) {
-            var tmp = document.createElement("div"),
-              container = gadget.element.querySelector(".column_item_container");
+            var tmp = document.createElement("div");
+            container = gadget.element.querySelector(".column_item_container");
             tmp.innerHTML = template;
             container.appendChild(tmp);
           });
@@ -126,7 +126,7 @@
 
     }, false, false)
 
-    .onEvent('submit', function (evt) {
+    .onEvent('submit', function submit(evt) {
       var gadget = this,
         options = {},
         form = evt.target,

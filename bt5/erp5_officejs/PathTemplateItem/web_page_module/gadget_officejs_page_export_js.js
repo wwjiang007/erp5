@@ -11,6 +11,14 @@
       "url": "officejs_text_editor/",
       "cache": "gadget_officejs_text_editor.appcache"
     },
+    "Smart Assistant": {
+      "url": "officejs_smart_assistant/",
+      "cache": "gadget_smart_assistant.appcache"
+    },
+    "Media Player": {
+      "url": "officejs_media_player/",
+      "cache": "gadget_officejs_media_player.appcache"
+    },
     "Illustration Editor": {
       "url": "officejs_svg_editor/",
       "cache": "gadget_officejs_illustration.appcache"
@@ -62,7 +70,7 @@
       "cache" : "gadget_officejs_monitoring.appcache"
     },
     "App Store": {
-      "url": "officejsoldv1/",
+      "url": "officejs_appstore/",
       "cache": "officejs_store.appcache",
       "no_installer": true
     },
@@ -88,6 +96,11 @@
     "Drive App": {
       "url": "officejs_drive_app/",
       "cache": "gadget_officejs_drive_app.appcache"
+    },
+    "Travel Expense": {
+      "url": "officejs_hr/",
+      "cache": "gadget_officejs_hr.appcache",
+      "no_installer": true
     }
   };
 

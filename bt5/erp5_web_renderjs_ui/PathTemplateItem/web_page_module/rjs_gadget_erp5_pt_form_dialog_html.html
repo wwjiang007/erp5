@@ -1,16 +1,8 @@
 <!DOCTYPE html>
 <html>
-  <!--
-    data-i18n=Input data has errors
-    data-i18n=You do not have the permissions to edit the object
-    data-i18n=Document was not saved! Resubmit when you are online or the document accessible
-    data-i18n=Encountered an unknown error. Try to resubmit
-    data-i18n=Data received
-    data-i18n=Action succeeded
-  -->
   <head>
     <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
-    <meta name="viewport" content="width=device-width, user-scalable=no" />
+    <meta name="viewport" content="width=device-width" />
     <title>ERP5 PT Form Dialog</title>
 
     <!-- renderjs -->
@@ -21,9 +13,9 @@
 
     <script id="dialog-button-template" type="text/x-handlebars-template">
       {{#if show_update_button}}
-        <button name="action_update" type="submit" data-i18n="Update">Update</button>
+        <button disabled name="action_update" type="submit" data-i18n="Update">Update</button>
       {{/if}}
-      <input name="action_confirm" class="dialogconfirm" data-theme="b" data-inline="true" type="submit" data-i18n="[value]Proceed" value="Proceed" data-icon="check" />
+      <input disabled name="action_confirm" class="dialogconfirm" data-theme="b" data-inline="true" type="submit" data-i18n="[value]Proceed" value="Proceed" data-icon="check" />
       <a class="dialogcancel" data-i18n="Cancel">Cancel</a>
     </script>
 

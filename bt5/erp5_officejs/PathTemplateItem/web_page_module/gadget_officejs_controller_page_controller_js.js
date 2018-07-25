@@ -47,7 +47,7 @@
 
           if (result.portal_type !== undefined) {
             child_gadget_url = 'gadget_officejs_jio_' +
-              result.portal_type.replace(' ', '_').toLowerCase() +
+              result.portal_type.replace(/ /g, '_').toLowerCase() +
               '_view.html';
           } else {
             throw new Error('Can not display document: ' + options.jio_key);
@@ -60,10 +60,18 @@
           });
         });
     })
-    .onStateChange(function () {
+    .onStateChange(function (modification_dict) {
       var fragment = document.createElement('div'),
         gadget = this;
-
+      if (!modification_dict.hasOwnProperty('child_gadget_url')) {
+        return gadget.getDeclaredGadget('fg')
+          .push(function (child_gadget) {
+            return child_gadget.render({
+              jio_key: gadget.state.jio_key,
+              doc: gadget.state.doc
+            });
+          });
+      }
       // Clear first to DOM, append after to reduce flickering/manip
       while (this.element.firstChild) {
         this.element.removeChild(this.element.firstChild);

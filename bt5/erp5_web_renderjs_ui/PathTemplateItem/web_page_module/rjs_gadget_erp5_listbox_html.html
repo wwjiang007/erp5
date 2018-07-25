@@ -6,9 +6,10 @@
      data-i18n=Records
      data-i18n=Hide Rows
      data-i18n=Submit
+     data-i18n=sample of
    -->
     <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
-    <meta name="viewport" content="width=device-width, user-scalable=no" />
+    <meta name="viewport" content="width=device-width" />
     <title>ERP5 Listbox</title>
 
     <!-- renderjs -->
@@ -29,9 +30,9 @@
            {{/if}}
            {{#each head_value}}
               {{#if sort_link}}
-              <th class="{{class_value}}"><a href="{{sort_link}}" data-i18n="{{data-i18n}}">{{text}}</a></th>
+              <th class="{{class_value}}"><a href="{{sort_link}}">{{text}}</a></th>
               {{else}}
-              <th data-i18n="{{data-i18n}}" class="{{class_value}}">{{text}}</th>
+              <th class="{{class_value}}">{{text}}</th>
               {{/if}}
            {{/each}}
            {{#if line_icon}}
@@ -51,7 +52,7 @@
            {{/if}}
            <th></th>
            {{#each head_value}}
-              <th  data-i18n="{{data-i18n}}" class="{{class_value}}">{{text}}</th>
+              <th class="{{class_value}}">{{text}}</th>
            {{/each}}
            {{#if line_icon}}
              <th></th>
@@ -77,12 +78,20 @@
                   {{#if editable}}
                     <div class="editable_div" data-column="{{column}}" data-line="{{line}}"></div>
                   {{else}}
-                    <a href="{{href}}" class="ui-link">
-                      <div class="editable_div" data-column="{{column}}" data-line="{{line}}"></div>
-                    </a>
+                    {{#if href}}
+                      <a href="{{href}}" class="ui-link">
+                        <div class="editable_div" data-column="{{column}}" data-line="{{line}}"></div>
+                      </a>
+                     {{else}}
+                       <div class="editable_div" data-column="{{column}}" data-line="{{line}}"></div>
+                     {{/if}}
                   {{/if}}
                 {{else}}
-                  <a href="{{href}}" class="ui-link">{{default}}</a>
+                  {{#if href}}
+                    <a href="{{href}}" class="ui-link">{{default}}</a>
+                  {{else}}
+                    <p>{{default}}</p>
+                  {{/if}}
                 {{/if}}
               </td>
            {{/each}}
@@ -117,12 +126,20 @@
                   {{#if editable}}
                     <div class="editable_div" data-column="{{column}}" data-line="{{line}}"></div>
                   {{else}}
-                    <a href="{{href}}" class="ui-link">
+                    {{#if href}}
+                      <a href="{{href}}" class="ui-link">
+                        <div class="editable_div" data-column="{{column}}" data-line="{{line}}"></div>
+                      </a>
+                    {{else}}
                       <div class="editable_div" data-column="{{column}}" data-line="{{line}}"></div>
-                    </a>
+                    {{/if}}
                   {{/if}}
                 {{else}}
-                  <a href="{{href}}" class="ui-link">{{default}}</a>
+                  {{#if href}}
+                    <a href="{{href}}" class="ui-link">{{default}}</a>
+                  {{else}}
+                    <p>{{default}}</p>
+                  {{/if}}
                 {{/if}}
               </td>
            {{/each}}
@@ -177,9 +194,9 @@
     <script id="listbox-template" type="text/x-handlebars-template">
       <div class="ui-table-header ui-header ui-bar-c ui-corner-all">
         <h1 data-i18n="{{title}}" class="ui-title ui-override-theme">{{title}}<span> <span class="listboxloader ui-icon-spinner ui-btn-icon-left"></span></span></h1>
-          <button data-rel="hide" data-i18n="{{hide_button_text}}" name="{{hide_button_name}}" type="button" class="submit responsive ui-last-child ui-btn ui-icon-low-vision ui-btn-icon-left {{hide_class}}">{{hide_button_text}}</button>
-          <button data-rel="configure_columns" data-i18n="Configure" name="Configure" type="button" class="submit responsive ui-last-child ui-btn ui-icon-wrench ui-btn-icon-left {{configure_class}}">Configure</button>
-          <button data-rel="Sort" data-i18n="Sort" name="Sort" type="button" class="submit responsive ui-last-child ui-btn ui-icon-sort-amount-desc ui-btn-icon-left {{sort_class}}">Sort</button>
+          <button {{disabled}} data-rel="hide" data-i18n="{{hide_button_text}}" name="{{hide_button_name}}" type="button" class="submit responsive ui-last-child ui-btn ui-icon-low-vision ui-btn-icon-left {{hide_class}}">{{hide_button_text}}</button>
+          <button {{disabled}} data-rel="configure_columns" data-i18n="Configure" name="Configure" type="button" class="submit responsive ui-last-child ui-btn ui-icon-wrench ui-btn-icon-left {{configure_class}}">Configure</button>
+          <button {{disabled}} data-rel="Sort" data-i18n="Sort" name="Sort" type="button" class="submit responsive ui-last-child ui-btn ui-icon-sort-amount-desc ui-btn-icon-left {{sort_class}}">Sort</button>
       </div>
       <table class="ui-responsive ui-body-c ui-table-inset">
         <thead class="ui-bar-inherit thead"></thead>
@@ -194,7 +211,7 @@
   <script id="error-message-template" type="text/x-handlebars-template">
     <div class="ui-listbox-error">
 		   <a class="ui-btn ui-corner-all ui-btn-inline" href="{{reset_url}}">
-		     <span style="color:red" data-i18n="Invalid Search Criteria">Invalid Search Criteria</span>
+		     <span class='ui-info-error' data-i18n="Invalid Search Criteria">Invalid Search Criteria</span>
 		     <span>-</span>
          <span data-i18n="Reset">Reset</span>
        </a>

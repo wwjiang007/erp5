@@ -38,10 +38,7 @@
   }
 
   function route(my_root_gadget, my_scope, my_method, argument_list) {
-    return RSVP.Queue()
-      .push(function () {
-        return my_root_gadget.getDeclaredGadget(my_scope);
-      })
+    return my_root_gadget.getDeclaredGadget(my_scope)
       .push(function (my_gadget) {
         if (argument_list) {
           return my_gadget[my_method].apply(my_gadget, argument_list);
@@ -306,14 +303,29 @@
     //////////////////////////////////////////
     // Allow Acquisition
     //////////////////////////////////////////
-    .allowPublicAcquisition("getSetting", function (argument_list) {
+    .allowPublicAcquisition("getSettingList",
+                            function getSettingList(argument_list) {
+        var key_list = argument_list[0];
+        return route(this, 'setting_gadget', 'get', [this.props.setting_id])
+          .push(function (doc) {
+            var i,
+              result_list = [];
+            for (i = 0; i < key_list.length; i += 1) {
+              result_list[i] = doc[key_list[i]];
+            }
+            return result_list;
+          }, function (error) {
+            if (error.status_code === 404) {
+              return new Array(key_list.length);
+            }
+            throw error;
+          });
+      })
+    .allowPublicAcquisition("getSetting", function getSetting(argument_list) {
       var gadget = this,
         key = argument_list[0],
         default_value = argument_list[1];
-      return gadget.getDeclaredGadget("setting_gadget")
-        .push(function (jio_gadget) {
-          return jio_gadget.get(gadget.props.setting_id);
-        })
+      return route(gadget, 'setting_gadget', 'get', [gadget.props.setting_id])
         .push(function (doc) {
           return doc[key] || default_value;
         }, function (error) {
@@ -323,7 +335,7 @@
           throw error;
         });
     })
-    .allowPublicAcquisition("setSetting", function (argument_list) {
+    .allowPublicAcquisition("setSetting", function setSetting(argument_list) {
       var jio_gadget,
         gadget = this,
         key = argument_list[0],
@@ -344,29 +356,34 @@
           return jio_gadget.put(gadget.props.setting_id, doc);
         });
     })
-    .allowPublicAcquisition("translateHtml", function (argument_list) {
-      return this.getDeclaredGadget("translation_gadget")
-        .push(function (translation_gadget) {
-          return translation_gadget.translateHtml(argument_list[0]);
-        });
+    .allowPublicAcquisition("translateHtml", function translateHtml(
+      argument_list
+    ) {
+      return route(this, 'translation_gadget', 'translateHtml', argument_list);
     })
 
     // XXX Those methods may be directly integrated into the header,
     // as it handles the submit triggering
-    .allowPublicAcquisition('notifySubmitting', function (argument_list) {
+    .allowPublicAcquisition('notifySubmitting', function notifySubmitting(
+      argument_list
+    ) {
       return RSVP.all([
         route(this, "header", 'notifySubmitting'),
         route(this, "notification", 'notify', argument_list)
       ]);
     })
-    .allowPublicAcquisition('notifySubmitted', function (argument_list) {
+    .allowPublicAcquisition('notifySubmitted', function notifySubmitted(
+      argument_list
+    ) {
       return RSVP.all([
         route(this, "header", 'notifySubmitted'),
         route(this, "notification", 'notify', argument_list),
         route(this, "router", 'notify', argument_list)
       ]);
     })
-    .allowPublicAcquisition('notifyChange', function (argument_list) {
+    .allowPublicAcquisition('notifyChange', function notifyChange(
+      argument_list
+    ) {
       return RSVP.all([
         route(this, "header", 'notifyChange'),
         route(this, "notification", 'notify', argument_list),
@@ -374,11 +391,11 @@
       ]);
     })
 
-    .allowPublicAcquisition('isDesktopMedia', function (argument_list) {
+    .allowPublicAcquisition('isDesktopMedia', function isDesktopMedia() {
       return window.matchMedia("(min-width: 85em)").matches;
     })
 
-    .allowPublicAcquisition('refresh', function () {
+    .allowPublicAcquisition('refresh', function refresh() {
       var gadget = this;
       return gadget.getDeclaredGadget(MAIN_SCOPE)
         .push(function (main) {
@@ -390,37 +407,36 @@
         });
     })
 
-    .allowPublicAcquisition("translate", function (argument_list) {
-      return this.getDeclaredGadget("translation_gadget")
-        .push(function (translation_gadget) {
-          return translation_gadget.translate(argument_list[0]);
-        });
+    .allowPublicAcquisition("translate", function translate(argument_list) {
+      return route(this, 'translation_gadget', 'translate', argument_list);
     })
+    .allowPublicAcquisition("getTranslationList",
+                            function getTranslationList(argument_list) {
+        return route(this, 'translation_gadget', 'getTranslationList',
+                     argument_list);
+      })
 
-    .allowPublicAcquisition("redirect", function (param_list) {
-      return this.getDeclaredGadget('router')
-        .push(function (router_gadget) {
-          return router_gadget.redirect.apply(router_gadget, param_list);
-        });
+    .allowPublicAcquisition("redirect", function redirect(param_list) {
+      return route(this, 'router', 'redirect', param_list);
     })
-    .allowPublicAcquisition('reload', function () {
+    .allowPublicAcquisition('reload', function reload() {
       return location.reload();
     })
-    .allowPublicAcquisition("getUrlParameter", function (param_list) {
-      return this.getDeclaredGadget('router')
-        .push(function (router_gadget) {
-          return router_gadget.getUrlParameter.apply(router_gadget, param_list);
-        });
+    .allowPublicAcquisition("getUrlParameter", function getUrlParameter(
+      param_list
+    ) {
+      return route(this, 'router', 'getUrlParameter', param_list);
     })
-    .allowPublicAcquisition("getUrlFor", function (param_list) {
-      return this.getDeclaredGadget('router')
-        .push(function (router_gadget) {
-          return router_gadget.getCommandUrlFor.apply(router_gadget,
-                                                      param_list);
-        });
+    .allowPublicAcquisition("getUrlFor", function getUrlFor(param_list) {
+      return route(this, 'router', 'getCommandUrlFor', param_list);
+    })
+    .allowPublicAcquisition("getUrlForList", function getUrlForList(
+      param_list
+    ) {
+      return route(this, 'router', 'getCommandUrlForList', param_list);
     })
 
-    .allowPublicAcquisition("updateHeader", function (param_list) {
+    .allowPublicAcquisition("updateHeader", function updateHeader(param_list) {
       var gadget = this;
       initHeaderOptions(gadget);
       return this.getDeclaredGadget("translation_gadget")
@@ -466,67 +482,78 @@
         });
     })
 
-    .allowPublicAcquisition("updatePanel", function (param_list) {
+    .allowPublicAcquisition("updatePanel", function updatePanel(param_list) {
       var gadget = this;
       initPanelOptions(gadget);
       gadget.props.panel_argument_list = param_list[0];
     })
 
-    .allowPublicAcquisition('hidePanel', function (param_list) {
+    .allowPublicAcquisition('hidePanel', function hidePanel(param_list) {
       return hideDesktopPanel(this, param_list[0]);
     })
-    .allowPublicAcquisition('triggerPanel', function () {
+    .allowPublicAcquisition('triggerPanel', function triggerPanel() {
       return route(this, "panel", "toggle");
     })
-    .allowPublicAcquisition('renderEditorPanel', function (param_list) {
-      return route(this, "editor_panel", 'render', param_list);
-    })
-    .allowPublicAcquisition("jio_allDocs", function (param_list) {
+    .allowPublicAcquisition('renderEditorPanel',
+                            function renderEditorPanel(param_list) {
+        return route(this, "editor_panel", 'render', param_list);
+      })
+    .allowPublicAcquisition("jio_allDocs", function jio_allDocs(param_list) {
       return callJioGadget(this, "allDocs", param_list);
     })
-    .allowPublicAcquisition("jio_remove", function (param_list) {
+    .allowPublicAcquisition("jio_remove", function jio_remove(param_list) {
       return callJioGadget(this, "remove", param_list);
     })
-    .allowPublicAcquisition("jio_post", function (param_list) {
+    .allowPublicAcquisition("jio_post", function jio_post(param_list) {
       return callJioGadget(this, "post", param_list);
     })
-    .allowPublicAcquisition("jio_put", function (param_list) {
+    .allowPublicAcquisition("jio_put", function jio_put(param_list) {
       return callJioGadget(this, "put", param_list);
     })
-    .allowPublicAcquisition("jio_get", function (param_list) {
+    .allowPublicAcquisition("jio_get", function jio_get(param_list) {
       return callJioGadget(this, "get", param_list);
     })
-    .allowPublicAcquisition("jio_allAttachments", function (param_list) {
-      return callJioGadget(this, "allAttachments", param_list);
-    })
-    .allowPublicAcquisition("jio_getAttachment", function (param_list) {
-      return callJioGadget(this, "getAttachment", param_list);
-    })
-    .allowPublicAcquisition("jio_putAttachment", function (param_list) {
-      return callJioGadget(this, "putAttachment", param_list);
-    })
-    .allowPublicAcquisition("jio_removeAttachment", function (param_list) {
-      return callJioGadget(this, "removeAttachment", param_list);
-    })
-    .allowPublicAcquisition("jio_repair", function (param_list) {
+    .allowPublicAcquisition("jio_allAttachments",
+                            function jio_allAttachments(param_list) {
+        return callJioGadget(this, "allAttachments", param_list);
+      })
+    .allowPublicAcquisition("jio_getAttachment",
+                            function jio_getAttachment(param_list) {
+        return callJioGadget(this, "getAttachment", param_list);
+      })
+    .allowPublicAcquisition("jio_putAttachment",
+                            function jio_putAttachment(param_list) {
+        return callJioGadget(this, "putAttachment", param_list);
+      })
+    .allowPublicAcquisition("jio_removeAttachment",
+                            function jio_removeAttachment(param_list) {
+        return callJioGadget(this, "removeAttachment", param_list);
+      })
+    .allowPublicAcquisition("jio_repair", function jio_repair(param_list) {
       return callJioGadget(this, "repair", param_list);
     })
-    .allowPublicAcquisition("triggerSubmit", function (param_list) {
+    .allowPublicAcquisition("triggerSubmit", function triggerSubmit(
+      param_list
+    ) {
       return this.getDeclaredGadget(MAIN_SCOPE)
         .push(function (main_gadget) {
           return main_gadget.triggerSubmit.apply(main_gadget, param_list);
         });
     })
-    .allowPublicAcquisition("triggerMaximize", function (param_list) {
+    .allowPublicAcquisition("triggerMaximize", function maximize(
+      param_list
+    ) {
       return triggerMaximize(this, param_list[0]);
     })
     /////////////////////////////////////////////////////////////////
     // declared methods
     /////////////////////////////////////////////////////////////////
-    .allowPublicAcquisition("renderApplication", function (param_list) {
+    .allowPublicAcquisition("renderApplication", function renderApplication(
+      param_list
+    ) {
       return this.render.apply(this, param_list);
     })
-    .onStateChange(function (modification_dict) {
+    .onStateChange(function onStateChange(modification_dict) {
       var gadget = this,
         route_result = gadget.state;
 
@@ -539,7 +566,8 @@
           })
           .push(function () {
             // XXX Improve error rendering
-            gadget.props.content_element.innerHTML = "<br/><br/><br/><pre></pre>";
+            gadget.props.content_element.innerHTML =
+              "<br/><br/><br/><pre></pre>";
             gadget.props.content_element.querySelector('pre').textContent =
               "Error: " + gadget.state.error_text;
             // reset gadget state
@@ -600,7 +628,7 @@
         });
     })
     // Render the page
-    .declareMethod('render', function (route_result, keep_message) {
+    .declareMethod('render', function render(route_result, keep_message) {
       var gadget = this;
 
       // Reinitialize the loading counter
@@ -641,8 +669,10 @@
     /////////////////////////////////
     // Handle sub gadgets services
     /////////////////////////////////
-    .allowPublicAcquisition('reportServiceError', function (param_list,
-                                                            gadget_scope) {
+    .allowPublicAcquisition('reportServiceError', function reportServiceError(
+      param_list,
+      gadget_scope
+    ) {
       if (gadget_scope === undefined) {
         // don't fail in case of dropped subgadget (like previous page)
         return;
@@ -651,7 +681,7 @@
       return displayError(this, param_list[0]);
     })
 
-    .onEvent('submit', function () {
+    .onEvent('submit', function submit() {
       return displayError(this, new Error("Unexpected form submit"));
     });
 

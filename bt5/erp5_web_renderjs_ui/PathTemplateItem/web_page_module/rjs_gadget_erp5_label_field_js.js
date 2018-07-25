@@ -1,4 +1,4 @@
-/*global window, document, rJS, RSVP */
+/*global window, document, rJS */
 /*jslint indent: 2, maxerr: 3 */
 /**
  * Label gadget takes care of displaying validation errors and label.
@@ -11,7 +11,7 @@
  *    -  class "horizontal_align_form_box" will prevent any label to show as well
  *
  */
-(function (window, document, rJS, RSVP) {
+(function (window, document, rJS) {
   "use strict";
 
   var SCOPE = 'field';
@@ -74,18 +74,13 @@
       label_text: '',
       error_text: '',
       label: true,  // the label element is already present in the HTML template
-      css_class: ''
+      css_class: '',
+      first_call: false
     })
 
-    .ready(function () {
-      return this.changeState({
-        container_element: this.element.querySelector('div'),  // matches the closest div
-        label_element: this.element.querySelector('label')
-      });
-    })
-
-    .declareMethod('render', function (options) {
+    .declareMethod('render', function render(options) {
       var state_dict = {
+        first_call: true,
         label_text: options.field_json.title || '',
         label: options.label,
         field_url: getFieldTypeGadgetUrl(options.field_type),
@@ -103,28 +98,42 @@
       return this.changeState(state_dict);
     })
 
-    .onStateChange(function (modification_dict) {
+    .onStateChange(function onStateChange(modification_dict) {
       var gadget = this,
-        span;
+        span,
+        css_class,
+        i,
+        queue,
+        new_div;
 
-      if (gadget.state.hidden) {
+      if (modification_dict.hasOwnProperty('first_call')) {
+        gadget.props = {
+          container_element: gadget.element.querySelector('div'),
+          label_element: gadget.element.querySelector('label')
+        };
+      }
+
+      if (gadget.state.hidden && !modification_dict.error_text) {
         this.element.hidden = true;
       } else {
         this.element.hidden = false;
       }
 
       if (modification_dict.hasOwnProperty('label_text')) {
-        this.state.label_element.textContent = this.state.label_text;
+        this.props.label_element.textContent = this.state.label_text;
       }
-      this.state.label_element.setAttribute('for', gadget.state.scope);
+      this.props.label_element.setAttribute('for', gadget.state.scope);
 
       if (modification_dict.hasOwnProperty('css_class') && this.state.css_class) {
-        this.element.classList.add(this.state.css_class);
+        css_class = this.state.css_class.split(' ');
+        for (i = 0; i < css_class.length; i += 1) {
+          this.element.classList.add(css_class[i]);
+        }
       }
 
       if (modification_dict.hasOwnProperty('error_text')) {
         // first remove old errors
-        span = this.state.container_element.lastElementChild;
+        span = this.props.container_element.lastElementChild;
         if ((span !== null) && (span.tagName.toLowerCase() !== 'span')) {
           span = null;
         }
@@ -133,42 +142,42 @@
           if (span === null) {
             span = document.createElement('span');
             span.textContent = this.state.error_text;
-            this.state.container_element.appendChild(span);
+            this.props.container_element.appendChild(span);
           } else {
             span.textContent = this.state.error_text;
           }
         } else if (span !== null) {
-          this.state.container_element.removeChild(span);
+          this.props.container_element.removeChild(span);
         }
       }
 
       // Remove/add label_element from DOM
       if (modification_dict.hasOwnProperty('label')) {
         if (this.state.label === true) {
-          this.state.container_element.insertBefore(this.state.label_element, this.state.container_element.firstChild);
+          this.props.container_element.insertBefore(this.props.label_element, this.props.container_element.firstChild);
         } else {
-          this.state.container_element.removeChild(this.state.label_element);
+          this.props.container_element.removeChild(this.props.label_element);
         }
       }
 
       if (modification_dict.hasOwnProperty('options')) {
         if (this.state.field_url) {
-          return new RSVP.Queue()
-            .push(function () {
-              if (modification_dict.hasOwnProperty('field_url')) {
-                return gadget.declareGadget(gadget.state.field_url, {
-                  scope: SCOPE
-                })
-                  .push(function (field_gadget) {
-                    gadget.state.container_element.removeChild(
-                      gadget.state.container_element.querySelector('div')
-                    );
-                    gadget.state.container_element.appendChild(field_gadget.element);
-                    return field_gadget;
-                  });
-              }
-              return gadget.getDeclaredGadget(SCOPE);
-            })
+          if (modification_dict.hasOwnProperty('field_url')) {
+            //if (!modification_dict.hasOwnProperty('first_call')) {
+            gadget.props.container_element.removeChild(
+              gadget.props.container_element.querySelector('div')
+            );
+            //}
+            new_div = document.createElement('div');
+            gadget.props.container_element.appendChild(new_div);
+            queue = gadget.declareGadget(gadget.state.field_url, {
+              scope: SCOPE,
+              element: new_div
+            });
+          } else {
+            queue = gadget.getDeclaredGadget(SCOPE);
+          }
+          return queue
             .push(function (field_gadget) {
               return field_gadget.render(gadget.state.options);
             });
@@ -176,7 +185,7 @@
       }
     })
 
-    .declareMethod("checkValidity", function () {
+    .declareMethod("checkValidity", function checkValidity() {
       return this.getDeclaredGadget(SCOPE)
         .push(function (gadget) {
           // XXX Implement checkValidity on all fields
@@ -187,7 +196,7 @@
         });
     }, {mutex: 'changestate'})
 
-    .declareMethod('getContent', function () {
+    .declareMethod('getContent', function getContent() {
       var argument_list = arguments;
       return this.getDeclaredGadget(SCOPE)
         .push(function (gadget) {
@@ -198,7 +207,7 @@
         });
     }, {mutex: 'changestate'})
 
-    .declareMethod('getListboxInfo', function () {
+    .declareMethod('getListboxInfo', function getListboxInfo() {
       var argument_list = arguments;
       return this.getDeclaredGadget(SCOPE)
         .push(function (gadget) {
@@ -206,20 +215,20 @@
         });
     }, {mutex: 'changestate'})
 
-    .allowPublicAcquisition("notifyInvalid", function (param_list) {
+    .allowPublicAcquisition("notifyInvalid", function notifyInvalid(param_list) {
       // Label doesn't know when a subgadget calls notifyInvalid
       // Prevent mutex dead lock by defering the changeState call
       return this.deferErrorTextRender(param_list[0]);
     })
 
-    .allowPublicAcquisition("notifyValid", function () {
+    .allowPublicAcquisition("notifyValid", function notifyValid() {
       // Label doesn't know when a subgadget calls notifyValid
       // Prevent mutex dead lock by defering the changeState call
       return this.deferErrorTextRender('');
     })
 
-    .declareJob('deferErrorTextRender', function (error_text) {
-      return this.changeState({error_text: error_text});
+    .declareJob('deferErrorTextRender', function deferErrorTextRender(error_text) {
+      return this.changeState({first_call: true, error_text: error_text});
     });
 
-}(window, document, rJS, RSVP));
+}(window, document, rJS));

@@ -448,6 +448,9 @@ iframe {
 img {
   image-orientation: from-image;
 }
+.ui-info-error {
+  color: red;
+}
 /**********************************************
 * Gadget: panel
 **********************************************/
@@ -786,9 +789,9 @@ div[data-gadget-scope='header'] .ui-header .ui-controlgroup-controls a:active {
 @media only screen and (min-width: 45em) and (max-width: 85em), not screen and (max-width: 85em) {
   div[data-gadget-scope='header'] .ui-header .ui-controlgroup-controls button::before,
   div[data-gadget-scope='header'] .ui-header .ui-controlgroup-controls a::before {
-    width: 1em;
     margin-right: 6pt;
     text-align: center;
+    width: 1em;
   }
 }
 @media not screen and (min-width: 45em) {
@@ -822,6 +825,10 @@ div[data-gadget-scope='header'] .ui-header > .ui-btn-left a {
     padding-right: 24pt;
     min-width: 5em;
   }
+}
+div[data-gadget-scope='header'] .ui-header > .ui-btn-right button.ui-icon-warning,
+div[data-gadget-scope='header'] .ui-header > .ui-btn-right a.ui-icon-warning {
+  background-color: #FF6600;
 }
 div[data-gadget-scope='header'] .ui-header h1 {
   text-align: left;
@@ -969,7 +976,9 @@ div[data-gadget-scope='header'] .ui-header ul {
     min-width: 5em;
   }
   div[data-gadget-scope='header'] .ui-header ul li a::before {
-    display: none;
+    margin-right: 6pt;
+    text-align: center;
+    width: 1em;
   }
 }
 /**********************************************
@@ -1175,6 +1184,9 @@ div[data-gadget-scope='header'] .ui-header ul {
 .gadget-content .bottom iframe {
   height: 80vh;
 }
+.gadget-content .bottom .listbox-gadget iframe {
+  height: 30vh;
+}
 .gadget-content form .ui-field-contain {
   position: relative;
 }
@@ -1273,6 +1285,10 @@ div[data-gadget-scope='header'] .ui-header ul {
 .relation-input ul li:hover,
 .relation-input ul li:active {
   background-color: #1F1F1F;
+}
+.relation-input .ui-icon-warning {
+  color: #FF6600;
+  opacity: 1;
 }
 /**********************************************
 * Gadget: datetime field
@@ -1655,6 +1671,10 @@ div[data-gadget-scope='notification'] button.error {
     background-color: #085078;
     width: 8em;
   }
+  .desktop-panel-hidden div[data-gadget-scope="header"] .ui-header .ui-controlgroup-controls button.ui-icon-warning,
+  .desktop-panel-hidden div[data-gadget-scope="header"] .ui-header .ui-controlgroup-controls a.ui-icon-warning {
+    background-color: #FF6600;
+  }
   .desktop-panel-hidden div[data-gadget-scope="header"] .ui-header .ui-subheader {
     flex: 1 100%;
     text-align: center;
@@ -1717,6 +1737,44 @@ div[data-gadget-scope='maximize'] button:active {
   height: 100%;
 }
 /**********************************************
+* Front page
+**********************************************/
+div[data-gadget-url$="gadget_erp5_page_front.html"] > ul {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+div[data-gadget-url$="gadget_erp5_page_front.html"] > ul > li {
+  flex-shrink: 1;
+  vertical-align: top;
+  padding: 3pt;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  border-radius: 0.325em;
+  box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.15);
+}
+@media not screen and (min-width: 45em) {
+  div[data-gadget-url$="gadget_erp5_page_front.html"] > ul > li {
+    flex-basis: 100%;
+    margin-bottom: 6pt;
+  }
+}
+@media only screen and (min-width: 45em) and (max-width: 85em), not screen and (max-width: 85em) {
+  div[data-gadget-url$="gadget_erp5_page_front.html"] > ul > li {
+    margin-right: 24pt;
+    margin-bottom: 24pt;
+    flex-basis: 20em;
+  }
+}
+div[data-gadget-url$="gadget_erp5_page_front.html"] > ul > li h2 {
+  font-weight: 700;
+  background: #085078;
+  color: #FFFFFF;
+  padding: 6pt;
+}
+div[data-gadget-url$="gadget_erp5_page_front.html"] > ul > li li {
+  padding: 3pt 6pt;
+}
+/**********************************************
 * Icons
 **********************************************/
 .ui-btn-icon-top::before,
@@ -1727,12 +1785,6 @@ div[data-gadget-scope='maximize'] button:active {
   font-family: FontAwesome;
   display: inline-block;
   content: "";
-}
-.ui-icon-warning {
-  background-color: #FF6600 !important;
-}
-.ui-icon-warning::before {
-  content: "\f071";
 }
 .ui-icon-spinner {
   opacity: 1;
@@ -2072,6 +2124,9 @@ div[data-gadget-scope='maximize'] button:active {
 }
 .ui-icon-eye-slash::before {
   content: "\f070";
+}
+.ui-icon-warning::before {
+  content: "\f071";
 }
 .ui-icon-low-vision::before {
   content: "\f2a8";

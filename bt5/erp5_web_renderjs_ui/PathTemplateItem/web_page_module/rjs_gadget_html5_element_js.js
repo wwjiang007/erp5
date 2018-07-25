@@ -1,6 +1,6 @@
-/*global window, document, rJS */
+/*global window, document, rJS, getFirstNonEmpty, isEmpty */
 /*jslint indent: 2, maxerr: 3 */
-(function (window, document, rJS) {
+(function (window, document, rJS, getFirstNonEmpty, isEmpty) {
   "use strict";
 
   rJS(window)
@@ -16,17 +16,17 @@
       prepend: ''
     })
 
-    .declareMethod('render', function (options) {
+    .declareMethod('render', function render(options) {
       var state_dict = {
-          text_content: options.text_content || "",
-          inner_html: options.inner_html || "",
+          text_content: getFirstNonEmpty(options.text_content, ""),
+          inner_html: getFirstNonEmpty(options.inner_html, ""),
           id: options.id,
           tag: options.tag || 'div',
           src: options.src,
           alt: options.alt,
           name: options.name,
-          append: options.append || '',
-          prepend: options.prepend || ''
+          append: getFirstNonEmpty(options.append, ""),
+          prepend: getFirstNonEmpty(options.prepend, "")
         };
       // data are dictionary thus include it only when defined so it appears
       // in modification_dict only when necessary
@@ -37,13 +37,13 @@
       return this.changeState(state_dict);
     })
 
-    .onStateChange(function (modification_dict) {
+    .onStateChange(function onStateChange(modification_dict) {
       var element = this.element,
         new_element = document.createElement(this.state.tag),
         content = this.state.text_content,
-        data, data_attr;
-
-      if (this.state.text_content) {
+        data,
+        data_attr;
+      if (!isEmpty(this.state.text_content)) {
         if (this.state.prepend) {
           content = this.state.prepend + "&nbsp;" + content;
         }
@@ -51,7 +51,7 @@
           content = content + "&nbsp;" + this.state.append;
         }
         new_element.textContent = content;
-      } else if (this.state.inner_html) {
+      } else if (!isEmpty(this.state.inner_html)) {
         new_element.innerHTML = this.state.inner_html;
       }
       if (this.state.id) {
@@ -82,13 +82,19 @@
      * obtain value of readonly fields.
      * In order to make it more developer-friendly, only named fields return their values.
      */
-    .declareMethod("getContent", function () {
+    .declareMethod("getContent", function getContent() {
       var data = {};
       if (!this.state.name) {
         return data;
       }
-      data[this.state.name] = this.state.text_content || this.state.inner_html || "";
+      if (!isEmpty(this.state.text_content)) {
+        data[this.state.name] = this.state.text_content;
+      } else if (!isEmpty(this.state.inner_html)) {
+        data[this.state.name] = this.state.inner_html;
+      } else {
+        data[this.state.name] = "";
+      }
       return data;
     });
 
-}(window, document, rJS));
+}(window, document, rJS, getFirstNonEmpty, isEmpty));

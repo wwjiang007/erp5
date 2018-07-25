@@ -96,16 +96,14 @@
     var container,
       column_list = JSON.parse(gadget.state.column_list_json);
 
-    return gadget.translateHtml(template(
-      {
-        "row_list": row_list,
-        "show_anchor": gadget.state.show_anchor,
-        "column_list": column_list
-      }
-    ))
-      .push(function (table_part_html) {
-        container = document.createElement(container_name);
-        container.innerHTML = table_part_html;
+    container = document.createElement(container_name);
+    container.innerHTML = template({
+      "row_list": row_list,
+      "show_anchor": gadget.state.show_anchor,
+      "column_list": column_list
+    });
+    return new RSVP.Queue()
+      .push(function () {
         return renderEditableField(gadget, container, row_list);
       })
       .push(function () {
@@ -131,6 +129,7 @@
     /////////////////////////////////////////////////////////////////
     // ready
     /////////////////////////////////////////////////////////////////
+    .setState({disabled: true})
     // Init local properties
     .ready(function () {
       this.props = {
@@ -148,6 +147,7 @@
     .declareAcquiredMethod("jio_allDocs", "jio_allDocs")
     .declareAcquiredMethod("translateHtml", "translateHtml")
     .declareAcquiredMethod("getUrlFor", "getUrlFor")
+    .declareAcquiredMethod("getUrlForList", "getUrlForList")
     .declareAcquiredMethod("getUrlParameter", "getUrlParameter")
     .declareAcquiredMethod("renderEditorPanel", "renderEditorPanel")
     .declareAcquiredMethod("redirect", "redirect")
@@ -156,7 +156,7 @@
     //////////////////////////////////////////////
     // initialize the gadget content
     //////////////////////////////////////////////
-    .declareMethod('render', function (options) {
+    .declareMethod('render', function render(options) {
       var gadget = this,
         field_json = options.field_json,
         sort_column_list = [],
@@ -309,7 +309,7 @@
       return queue;
     })
 
-    .onStateChange(function (modification_dict) {
+    .onStateChange(function onStateChange(modification_dict) {
       var gadget = this,
         sort_key = gadget.state.key + "_sort_list:json",
         sort_list,
@@ -317,7 +317,11 @@
         sort_column_list,
         i,
         j,
-        result_queue = new RSVP.Queue();
+        result_queue = new RSVP.Queue(),
+        button_selector_list = ['button[name="Sort"]', 'button[name="Hide"]',
+                                'button[name="Configure"]',
+                                'button[name="SelectRows"]'],
+        button;
 
 /*
       if (modification_dict.hasOwnProperty('error_text') && this.state.error_text !== undefined) {
@@ -349,7 +353,16 @@
           });
       }
 
-
+      if (modification_dict.hasOwnProperty('disabled')) {
+        // Mark buttons as enabled/disabled
+        // so that Zelenium can explicitely wait for enabled button
+        for (i = 0; i < button_selector_list.length; i += 1) {
+          button = gadget.element.querySelector(button_selector_list[i]);
+          if (button !== null) {
+            button.disabled = gadget.state.disabled;
+          }
+        }
+      }
 
       if ((modification_dict.hasOwnProperty('sort_list_json')) ||
           (modification_dict.hasOwnProperty('column_list_json')) ||
@@ -405,7 +418,6 @@
                 }
 
                 return {
-                  "data-i18n": column[1],
                   "class_value": class_value,
                   "sort_link": column_sort_link_list[index],
                   "text": column[1]
@@ -428,7 +440,8 @@
                 configure_class: gadget.state.configure_class,
                 title: gadget.state.title,
                 hide_button_text: hide_button_text,
-                hide_button_name: hide_button_name
+                hide_button_name: hide_button_name,
+                disabled: gadget.state.disabled ? 'disabled' : ''
               })),
               gadget.translateHtml(listbox_thead_template({
                 head_value: head_value_list,
@@ -468,9 +481,11 @@
           .push(function () {
             var lines = gadget.state.lines,
               promise_list = [],
+              url_promise_list = [],
               allDocs_result = gadget.state.allDocs_result,
               counter,
-              pagination_message = '';
+              pagination_message = '',
+              content_value;
 
             column_list = JSON.parse(gadget.state.column_list_json);
             // for actual allDocs_result structure see ref:gadget_erp5_jio.js
@@ -483,29 +498,34 @@
             sort_list = JSON.parse(gadget.state.sort_list_json);
             // Every line points to a sub-document so we need those links
             for (i = 0; i < counter; i += 1) {
-              promise_list.push(
-                gadget.getUrlFor({
-                  command: gadget.state.command,
-                  options: {
-                    jio_key: allDocs_result.data.rows[i].id,
-                    uid: allDocs_result.data.rows[i].value.uid,
-                    selection_index: gadget.state.begin_from + i,
-                    query: gadget.state.query_string,
-                    list_method_template: gadget.state.list_method_template,
-                    "sort_list:json": sort_list
+              promise_list.push({
+                command: gadget.state.command,
+                options: {
+                  jio_key: allDocs_result.data.rows[i].id,
+                  uid: allDocs_result.data.rows[i].value.uid,
+                  selection_index: gadget.state.begin_from + i,
+                  query: gadget.state.query_string,
+                  list_method_template: gadget.state.list_method_template,
+                  "sort_list:json": sort_list
+                }
+              });
+              for (j = 0; j < column_list.length; j += 1) {
+                content_value = allDocs_result.data.rows[i].value[column_list[j][0]] || "";
+                if (content_value.url_value) {
+                  if (content_value.url_value.command) {
+                    url_promise_list.push(content_value.url_value);
                   }
-                })
-              );
+                }
+              }
             }
-            return new RSVP.Queue()
-              .push(function () {
-                return RSVP.all(promise_list);
-              })
-
+            promise_list.push.apply(promise_list, url_promise_list);
+            return gadget.getUrlForList(promise_list)
               .push(function (line_link_list) {
                 var row_list = [],
                   value,
                   cell_list,
+                  url_value,
+                  index = 0,
                   listbox_tbody_template,
                   setNonEditable = function (cell) {cell.editable = false; };
                 // reset list of UIDs of editable sub-documents
@@ -520,15 +540,39 @@
                   cell_list = [];
                   for (j = 0; j < column_list.length; j += 1) {
                     value = allDocs_result.data.rows[i].value[column_list[j][0]] || "";
-                    // value can be simply just a value in case of non-editable field
-                    // thus we construct "field_json" manually and insert the value in "default"
-                    if (value.constructor !== Object) {
+                     //url column
+                    // get url value
+                    if (value.url_value) {
+                      if (value.url_value.command) {
+                        url_value = line_link_list[counter + index];
+                        index += 1;
+                      } else {
+                        url_value = false;
+                      }
+                    } else {
+                      url_value = line_link_list[i];
+                    }
+                    // We need to check for field_gadget_param and then update
+                    // value accordingly. value can be simply just a value in
+                    // case of non-editable field thus we construct "field_json"
+                    // manually and insert the value in "default"
+
+                    if (value.constructor === Object) {
+                      if (value.field_gadget_param) {
+                        value = value.field_gadget_param;
+                      } else {
+                        value = {
+                          'editable': 0,
+                          'default': value.default
+                        };
+                      }
+                    } else {
                       value = {
                         'editable': 0,
                         'default': value
                       };
                     }
-                    value.href = line_link_list[i];
+                    value.href = url_value;
                     value.editable = value.editable && gadget.state.editable;
                     value.line = i;
                     value.column = j;
@@ -576,13 +620,17 @@
                   setNext();
                 }
                 return RSVP.all([
-                  gadget.getUrlFor({command: 'change', options: prev_param}),
-                  gadget.getUrlFor({command: 'change', options: next_param})
+                  gadget.translate('sample of'),
+                  gadget.getUrlForList([
+                    {command: 'change', options: prev_param},
+                    {command: 'change', options: next_param}
+                  ])
                 ]);
-
               })
-              .push(function (url_list) {
-                var record,
+              .push(function (result_list) {
+                var sample_string = result_list[0],
+                  url_list = result_list[1],
+                  record,
                   previous_url = url_list[0],
                   next_url = url_list[1],
                   previous_classname = "ui-btn ui-icon-carat-l ui-btn-icon-left responsive ui-first-child",
@@ -597,7 +645,11 @@
                 } else {
                   pagination_message = (((gadget.state.begin_from + lines) / lines - 1) * lines + 1) + " - " + (((gadget.state.begin_from + lines) / lines - 1) * lines + counter);
                   if (allDocs_result.count !== undefined) {
-                    pagination_message += ' / ' + allDocs_result.count;
+                    if ((allDocs_result.count === 1000) && (!gadget.state.show_count)) {
+                      pagination_message += ' / ' + sample_string + ' ' + allDocs_result.count;
+                    } else {
+                      pagination_message += ' / ' + allDocs_result.count;
+                    }
                   }
                   record = variable.translated_records + " " + pagination_message;
                 }
@@ -662,7 +714,7 @@
       return result_queue;
     })
 
-    .declareMethod('getListboxInfo', function () {
+    .declareMethod('getListboxInfo', function getListboxInfo() {
       var domain_list = JSON.parse(this.state.domain_list_json),
         domain_dict = JSON.parse(this.state.domain_dict_json),
         i,
@@ -688,7 +740,7 @@
     //////////////////////////////////////////////
     // render the listbox in an asynchronous way
     //////////////////////////////////////////////
-    .declareJob('fetchLineContent', function (only_cancel) {
+    .declareJob('fetchLineContent', function fetchLineContent(only_cancel) {
       if (only_cancel) {
         return;
       }
@@ -756,7 +808,7 @@
         });
     })
 
-    .declareMethod("getContent", function (options) {
+    .declareMethod("getContent", function getContent(options) {
       var form_gadget = this,
         k,
         field_gadget,
@@ -789,7 +841,13 @@
         });
     }, {mutex: 'changestate'})
 
-    .onEvent('click', function (evt) {
+    .onEvent('click', function click(evt) {
+      // For some reason, Zelenium can click even if button has the disabled
+      // attribute. So, it is needed for now to manually checks
+      if (this.state.disabled) {
+        return;
+      }
+
       var gadget = this,
         sort_button = gadget.element.querySelector('button[name="Sort"]'),
         hide_button = gadget.element.querySelector('button[name="Hide"]'),
@@ -876,11 +934,17 @@
 
     }, false, false)
 
-    .allowPublicAcquisition("notifyInvalid", function () {
+    .declareService(function enableButton() {
+      // click event listener is now activated
+      // Change the state of the gadget
+      return this.changeState({disabled: false});
+    })
+
+    .allowPublicAcquisition("notifyInvalid", function notifyInvalid() {
       return;
     })
 
-    .allowPublicAcquisition("notifyValid", function () {
+    .allowPublicAcquisition("notifyValid", function notifyValid() {
       return;
     });
 

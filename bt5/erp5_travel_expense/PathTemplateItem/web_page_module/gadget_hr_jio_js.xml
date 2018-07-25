@@ -225,7 +225,7 @@
             </item>
             <item>
                 <key> <string>actor</string> </key>
-                <value> <string>cedric.le.ninivin</string> </value>
+                <value> <string>zope</string> </value>
             </item>
             <item>
                 <key> <string>comment</string> </key>
@@ -239,7 +239,7 @@
             </item>
             <item>
                 <key> <string>serial</string> </key>
-                <value> <string>961.60854.27381.38212</string> </value>
+                <value> <string>966.50115.49905.16025</string> </value>
             </item>
             <item>
                 <key> <string>state</string> </key>
@@ -257,8 +257,8 @@
                     </tuple>
                     <state>
                       <tuple>
-                        <float>1505399165.67</float>
-                        <string>UTC</string>
+                        <float>1523364927.08</float>
+                        <string>GMT+2</string>
                       </tuple>
                     </state>
                   </object>

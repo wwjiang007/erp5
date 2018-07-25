@@ -2788,14 +2788,39 @@ class Base( CopyContainer,
 #   def contentIds(self, *args, **kw):
 #     return []
 
+  security.declarePrivate('isSubtreeIndexable')
+  def isSubtreeIndexable(self):
+    """
+    Allow a container to preempt indexability of its content, without having
+    to set "isIndexable = False" on (at minimum) its immediate children.
+
+    The meaning of calling this method on an instance where
+    isAncestryIndexable returns False is undefined.
+    """
+    return self.isIndexable
+
+  security.declarePrivate('isAncestryIndexable')
+  def isAncestryIndexable(self):
+    """
+    Tells whether this document is indexable, taking into account its entire
+    ancestry: a document may only be indexed if its parent is indexable, and
+    it's parent's parent, etc until ERP5Site object (inclusive).
+    """
+    node = self.aq_inner
+    portal = aq_base(self.getPortalObject())
+    while True:
+      is_indexable = node.isSubtreeIndexable()
+      if not is_indexable or aq_base(node) is portal:
+        break
+      node = node.aq_parent
+    return is_indexable
+
   security.declarePrivate('immediateReindexObject')
   def immediateReindexObject(self, *args, **kw):
-    if self.isIndexable and int(getattr(self.getPortalObject(), 'isIndexable', 1)):
+    if self.isAncestryIndexable():
       with super_user():
         PortalContent.reindexObject(self, *args, **kw)
-
-  security.declarePrivate('recursiveImmediateReindexObject')
-  recursiveImmediateReindexObject = immediateReindexObject
+  _reindexOnCreation = immediateReindexObject
 
   security.declarePublic('reindexObject')
   def reindexObject(self, *args, **kw):
@@ -2810,31 +2835,39 @@ class Base( CopyContainer,
     # immediateReindexObject.
     # Do not check if root is indexable, it is done into catalogObjectList,
     # so we will save time
-    if self.isIndexable:
-      if activate_kw is None:
-        activate_kw = {}
+    if self.isAncestryIndexable():
+      kw, activate_kw = self._getReindexAndActivateParameterDict(
+        kw,
+        activate_kw,
+      )
+      activate_kw['serialization_tag'] = self.getRootDocumentPath()
+      self.activate(**activate_kw).immediateReindexObject(**kw)
 
-      reindex_kw = self.getDefaultReindexParameterDict()
-      if reindex_kw is not None:
-        reindex_kw = reindex_kw.copy()
-        reindex_activate_kw = reindex_kw.pop('activate_kw', None) or {}
-        reindex_activate_kw.update(activate_kw)
-        reindex_kw.update(kw)
-        kw = reindex_kw
-        activate_kw = reindex_activate_kw
-
-      group_id_list  = []
-      if kw.get("group_id") not in ('', None):
-        group_id_list.append(kw["group_id"])
-      if kw.get("sql_catalog_id") not in ('', None):
-        group_id_list.append(kw["sql_catalog_id"])
-      group_id = ' '.join(group_id_list)
-
-      self.activate(group_method_id='portal_catalog/catalogObjectList',
-                    alternate_method_id='alternateReindexObject',
-                    group_id=group_id,
-                    serialization_tag=self.getRootDocumentPath(),
-                    **activate_kw).immediateReindexObject(**kw)
+  def _getReindexAndActivateParameterDict(self, kw, activate_kw):
+    if activate_kw is None:
+      activate_kw = ()
+    reindex_kw = self.getDefaultReindexParameterDict()
+    if reindex_kw is not None:
+      reindex_kw = reindex_kw.copy()
+      reindex_activate_kw = reindex_kw.pop('activate_kw', None) or {}
+      reindex_activate_kw.update(activate_kw)
+      reindex_kw.update(kw)
+      kw = reindex_kw
+      activate_kw = reindex_activate_kw
+    else:
+      activate_kw = dict(activate_kw)
+    group_id_list  = []
+    if kw.get("group_id") not in ('', None):
+      group_id_list.append(kw["group_id"])
+    if kw.get("sql_catalog_id") not in ('', None):
+      group_id_list.append(kw["sql_catalog_id"])
+    if activate_kw.get('group_id') not in ('', None):
+      group_id_list.append(activate_kw['group_id'])
+    activate_kw['group_id'] = ' '.join(group_id_list)
+    activate_kw['group_method_id'] = 'portal_catalog/catalogObjectList'
+    activate_kw['alternate_method_id'] = 'alternateReindexObject'
+    activate_kw['activity'] = 'SQLDict'
+    return kw, activate_kw
 
   security.declarePublic('recursiveReindexObject')
   recursiveReindexObject = reindexObject
@@ -2850,7 +2883,7 @@ class Base( CopyContainer,
     """
       Get indexable childen recursively.
     """
-    if self.isIndexable:
+    if self.isAncestryIndexable():
       return [self]
     return []
 

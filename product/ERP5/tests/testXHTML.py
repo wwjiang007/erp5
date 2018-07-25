@@ -49,8 +49,11 @@ from xml.dom import minidom
 class TestXHTMLMixin(ERP5TypeTestCase):
 
   # some forms have intentionally empty listbox selections like RSS generators
-  FORM_LISTBOX_EMPTY_SELECTION_PATH_LIST = ['erp5_web_widget_library/WebSection_viewContentListAsRSS']
+  FORM_LISTBOX_EMPTY_SELECTION_PATH_LIST = ['erp5_web_widget_library/WebSection_viewContentListAsRSS',
+                                            'erp5_core/Base_viewHistoricalComparison',]
   JSL_IGNORE_FILE_LIST = (
+        'diff2html.js',
+        'diff2html-ui.js',
         'dream_graph_editor/lib/handlebars.min.js',
         'dream_graph_editor/lib/jquery-ui.js',
         'dream_graph_editor/lib/jquery.js',
@@ -84,6 +87,22 @@ class TestXHTMLMixin(ERP5TypeTestCase):
         'erp5_sql_browser',
         'erp5_dhtmlx_scheduler',
         'erp5_svg_editor',
+        )
+
+  HTML_IGNORE_FILE_LIST = (
+        'gadget_erp5_side_by_side_diff.html',
+        )
+  # NOTE: Here the difference between the JSL_IGNORE_SKIN_LIST is that we also
+  # consider the folders inside the skin. In this way, we can include multiple
+  # HTML files at once which are inside some folder in any skin folder.
+  HTML_IGNORE_SKIN_FOLDER_LIST = (
+        'erp5_jquery',
+        'erp5_fckeditor',
+        'erp5_ckeditor',
+        'erp5_svg_editor',
+        'erp5_jquery_ui',
+        'erp5_dms/pdf_js',
+        'erp5_test_result/test_result_js',
         )
 
   def changeSkin(self, skin_name):
@@ -229,11 +248,12 @@ class TestXHTMLMixin(ERP5TypeTestCase):
     path_list = []
     for script_path, script in skins_tool.ZopeFind(
               skins_tool, obj_metatypes=['File'], search_sub=1):
-      is_required_check_path = True
-      ignore_bts = ['erp5_jquery','erp5_fckeditor', 'erp5_svg_editor', 'erp5_jquery_ui']
       if script_path.endswith('.html'):
-        for ignore_bt_name in ignore_bts:
-          if  script_path.startswith(ignore_bt_name):
+        x = script_path.split('/', 1)
+        if not x[1] in self.HTML_IGNORE_FILE_LIST:
+          is_required_check_path = False
+        for ignore_folder_name in self.HTML_IGNORE_SKIN_FOLDER_LIST:
+          if  script_path.startswith(ignore_folder_name):
             is_required_check_path = False
             break;
         if is_required_check_path:
@@ -304,6 +324,24 @@ class TestXHTMLMixin(ERP5TypeTestCase):
               method = list_method
             if not callable(method):
               error_list.append((form_path, list_method))
+    self.assertEqual(error_list, [])
+
+  def test_callableCountMethodInListbox(self):
+    # check all count_method in listboxes
+    skins_tool = self.portal.portal_skins
+    error_list = []
+    for form_path, form in skins_tool.ZopeFind(
+              skins_tool, obj_metatypes=['ERP5 Form'], search_sub=1):
+      for field in self.getFieldList(form, form_path):
+        if field.getRecursiveTemplateField().meta_type == 'ListBox':
+          count_method = field.get_value("count_method")
+          if count_method:
+            if isinstance(count_method, str):
+              method = getattr(self.portal, count_method, None)
+            else:
+              method = count_method
+            if not callable(method):
+              error_list.append((form_path, count_method))
     self.assertEqual(error_list, [])
 
   def test_listActionInListbox(self):
@@ -542,6 +580,27 @@ class W3Validator(object):
     parses the validation results, returns a list of tuples:
     line_number, col_number, error description
     """
+    # Output is a set of headers then the XML content.
+    header_txt, body_txt = result.split('\n\n', 1)
+    # First, search the X-W3C headers
+    validator_status = 'Unknown'
+    error_count = -1
+    warning_count = -1
+
+    for header_line in header_txt.split('\n'):
+      if header_line.startswith('X-W3C-Validator-Status: '):
+        validator_status = header_line[len('X-W3C-Validator-Status: '):]
+      elif header_line.startswith('X-W3C-Validator-Errors: '):
+        error_count = int(header_line[len('X-W3C-Validator-Errors: '):])
+      elif header_line.startswith('X-W3C-Validator-Warnings: '):
+        warning_count = int(header_line[len('X-W3C-Validator-Warnings: '):])
+
+    if validator_status == 'Valid':
+      return [[], []]
+    if validator_status != 'Invalid':
+      return [[(None, None, 'Wrong validator status: %s' % validator_status)], []]
+
+    # Parsing is invalid
     result_list_list = []
     try:
       xml_doc = minidom.parseString(result)
@@ -567,6 +626,8 @@ class W3Validator(object):
             result.append(None)
         result_list.append(tuple(result))
       result_list_list.append(result_list)
+    if (len(result_list_list[0]) != error_count) or (len(result_list_list[1]) != warning_count):
+      result_list_list[0].append((None, None, 'Could not parse all errors/warnings'))
     return result_list_list
 
   def getErrorAndWarningList(self, page_source):
@@ -793,10 +854,9 @@ def addTestMethodDynamically(test_class, validator, target_business_templates):
                        tested_portal_type_list=tested_portal_type_list)
 
 
-# Two validators are available : tidy and the w3c validator
-# It's hightly recommanded to use the w3c validator because tidy dont show
-# all errors and show more warnings that there is.
-validator_to_use = 'w3c'
+# Three validators are available : nu, tidy and the w3c validator
+# It's hightly recommanded to use the nu validator which validates html5
+validator_to_use = 'nu'
 show_warnings = True
 
 validator = None

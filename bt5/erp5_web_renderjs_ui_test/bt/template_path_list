@@ -8,6 +8,8 @@ portal_tests/renderjs_ui_float_field_zuite
 portal_tests/renderjs_ui_float_field_zuite/**
 portal_tests/renderjs_ui_form_box_zuite
 portal_tests/renderjs_ui_form_box_zuite/**
+portal_tests/renderjs_ui_label_field_zuite
+portal_tests/renderjs_ui_label_field_zuite/**
 portal_tests/renderjs_ui_lines_field_zuite
 portal_tests/renderjs_ui_lines_field_zuite/**
 portal_tests/renderjs_ui_list_field_zuite
@@ -32,6 +34,8 @@ portal_tests/renderjs_ui_page_zuite
 portal_tests/renderjs_ui_page_zuite/**
 portal_tests/renderjs_ui_radio_field_zuite
 portal_tests/renderjs_ui_radio_field_zuite/**
+portal_tests/renderjs_ui_recover_password_zuite
+portal_tests/renderjs_ui_recover_password_zuite/**
 portal_tests/renderjs_ui_relation_field_zuite
 portal_tests/renderjs_ui_relation_field_zuite/**
 portal_tests/renderjs_ui_router_zuite

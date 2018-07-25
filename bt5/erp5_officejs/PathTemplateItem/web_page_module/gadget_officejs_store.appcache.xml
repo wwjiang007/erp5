@@ -109,6 +109,7 @@
 # XXX + fonts\n
 # images/ajax-loader.gif\n
 CACHE:\n
+appstore/officejs_smart_assistant_icon.png\n
 appstore/app/500px-Gnome-x-office-document.svg.png\n
 appstore/app/500px-Gnome-x-office-presentation.svg.png\n
 appstore/app/500px-Gnome-x-office-spreadsheet.svg.png\n
@@ -120,6 +121,7 @@ appstore/media_player_app_logo.jpg\n
 appstore/web_table_app_logo.svg\n
 appstore/forum_app_logo.png\n
 appstore/wallsearch_icon.svg\n
+appstore/hr_logo.svg\n
 appstore/app/contact_manager/icon_contacts.png\n
 appstore/app/contact_manager/icon_taskmanager.png\n
 appstore/app/contact_manager/icon_text_editor.png\n
@@ -367,7 +369,7 @@ NETWORK:\n
             </item>
             <item>
                 <key> <string>serial</string> </key>
-                <value> <string>962.12683.57878.4676</string> </value>
+                <value> <string>967.13490.46878.24849</string> </value>
             </item>
             <item>
                 <key> <string>state</string> </key>
@@ -385,7 +387,7 @@ NETWORK:\n
                     </tuple>
                     <state>
                       <tuple>
-                        <float>1506431682.21</float>
+                        <float>1526286345.4</float>
                         <string>UTC</string>
                       </tuple>
                     </state>

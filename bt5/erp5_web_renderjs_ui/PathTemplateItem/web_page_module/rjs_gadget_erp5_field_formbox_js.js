@@ -24,8 +24,8 @@
         gadget = this,
         field_json = options.field_json || {},
         new_state = {
-          value: field_json.value || field_json.default || "",
-          text_content: field_json.value || field_json.default || "",
+          value: field_json.value || field_json['default'] || "",
+          text_content: field_json.value || field_json['default'] || "",
           editable: field_json.editable,
           required: field_json.required,
           name: field_json.key,
@@ -41,21 +41,6 @@
         new_state.editable = options.editable;
       }
 
-      if (gadget.state.subgadget_template === undefined || options.reset === true) {
-        // render subgadget only when there is none OR render is explicitely requested
-        return gadget.declareGadget('gadget_erp5_page_form.html', {scope: 'sub'})
-          .push(function (form_gadget) {
-            // Clear first to DOM, append after to reduce flickering/manip
-            while (element.firstChild) {
-              element.removeChild(element.firstChild);
-            }
-            element.appendChild(form_gadget.element);
-            // Add newly created subgadget to the state
-            new_state.subgadget_template = 'gadget_erp5_page_form.html';
-            return gadget.changeState(new_state);
-          });
-      }
-
       return gadget.changeState(new_state);
     })
 
@@ -69,7 +54,8 @@
           key: gadget.state.name,
           view: gadget.state.view,
           jio_key: erp5_document_uri.segment(2),
-          editable: gadget.state.editable
+          editable: gadget.state.editable,
+          embedded: true
         };
 
       // do not preserve objects in the state
@@ -77,7 +63,7 @@
 
       return gadget.getDeclaredGadget('sub')
         .push(function (subgadget) {
-          subgadget.render(form_options);
+          return subgadget.render(form_options);
         });
     })
 
@@ -89,7 +75,7 @@
           });
       }
       return {};
-    })
+    }, {mutex: 'changestate'})
 
     .declareMethod('checkValidity', function () {
       if (this.state.editable) {
@@ -99,6 +85,6 @@
           });
       }
       return true;
-    });
+    }, {mutex: 'changestate'});
 
 }(window, rJS, URI));

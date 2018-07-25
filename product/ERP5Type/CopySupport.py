@@ -502,10 +502,11 @@ class CopyContainer:
       new_ob = self._getOb(new_id)
       new_ob._postCopy(self, op=op)
       if is_clone:
-        new_ob.manage_afterClone(new_ob)
+        if duplicate:
+          new_ob._postDuplicate()
+        else:
+          new_ob.manage_afterClone(new_ob)
         new_ob.wl_clearLocks()
-      if duplicate:
-        new_ob._postDuplicate()
       if not set_owner:
         # try to make ownership implicit if possible
         new_ob.manage_changeOwnershipType(explicit=0)
@@ -545,7 +546,6 @@ class CopyContainer:
 
   def _setNonIndexable(self):
     self.isIndexable = ConstantGetter('isIndexable', value=False)
-    self.__recurse('_setNonIndexable')
 
   def manage_pasteObjects(self, cb_copy_data=None, is_indexable=None, reindex_kw=None, immediate_reindex=False, REQUEST=None):
     """Paste previously copied objects into the current object.

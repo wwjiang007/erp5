@@ -371,6 +371,11 @@ a {
     background-color: @colorblocklinkbackground;
   }
 }
+.beforeHeaderButton() {
+  margin-right: @margin-size;
+  text-align: center;
+  width: 1em;
+}
 
 /**********************************************
 * Preformatted
@@ -562,6 +567,10 @@ img {
   image-orientation: from-image;
 }
 
+
+.ui-info-error {
+  color: red;
+}
 
 /**********************************************
 * Gadget: panel
@@ -960,9 +969,7 @@ div[data-gadget-scope='header'] .ui-header {
 
       &::before {
         @media @tablet, @desktop {
-          width: 1em;
-          margin-right: @margin-size;
-          text-align: center;
+          .beforeHeaderButton()
         }
 
         @media @smartphone {
@@ -996,6 +1003,9 @@ div[data-gadget-scope='header'] .ui-header {
       }
       @media @desktop {
         .renderDesktopSubLink();
+      }
+      &.ui-icon-warning {
+        background-color: @coloraccent;
       }
     }
   }
@@ -1132,7 +1142,7 @@ div[data-gadget-scope='header'] .ui-header {
           white-space: nowrap;
           overflow: hidden;
           &::before {
-            display: none;
+            .beforeHeaderButton()
           }
         }
       }
@@ -1370,6 +1380,11 @@ div[data-gadget-scope='header'] .ui-header {
     iframe {
       height: 80vh;
     }
+    .listbox-gadget {
+      iframe {
+        height: 30vh;
+      }
+    }
   }
 
 /*
@@ -1488,6 +1503,11 @@ div[data-gadget-scope='header'] .ui-header {
       }
 
     }
+  }
+  .ui-icon-warning {
+    color: @coloraccent;
+    // Link is disabled in this case
+    opacity: 1;
   }
 }
 
@@ -1896,6 +1916,9 @@ div[data-gadget-scope='notification'] {
       .ui-controlgroup-controls {
         button, a {
           .renderTabletHeaderButton();
+          &.ui-icon-warning {
+            background-color: @coloraccent;
+          }
         }
       }
 
@@ -1943,6 +1966,45 @@ div[data-gadget-scope='maximize'] button {
 }
 
 /**********************************************
+* Front page
+**********************************************/
+div[data-gadget-url$="gadget_erp5_page_front.html"] {
+  > ul {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+
+    > li {
+      flex-shrink: 1;
+      @media @smartphone {
+        flex-basis: 100%;
+        margin-bottom: @margin-size;
+      }
+      @media @tablet, @desktop {
+        margin-right: @quadruple-margin-size;
+        margin-bottom: @quadruple-margin-size;
+        flex-basis: 20em;
+      }
+
+      vertical-align: top;
+      padding: @half-margin-size;
+      border: @border;
+      border-radius: @border-radius;
+      box-shadow: 2px 2px 2px rgba(0,0,0,.15);
+      h2 {
+        font-weight: @header-font-weight;
+        background: @colorheaderbackground;
+        color: @white;
+        padding: @margin-size;
+      }
+      li {
+        padding: @half-margin-size @margin-size;
+      }
+    }
+  }
+}
+
+/**********************************************
 * Icons
 **********************************************/
 .ui-btn-icon-top, .ui-btn-icon-left, .ui-btn-icon-right, .ui-icon, .ui-btn-icon-notext {
@@ -1950,13 +2012,6 @@ div[data-gadget-scope='maximize'] button {
     font-family: FontAwesome;
     display: inline-block;
     content: "";
-  }
-}
-
-.ui-icon-warning {
-  background-color: @coloraccent !important;
-  &::before {
-    content: "\f071";
   }
 }
 
@@ -2301,6 +2356,9 @@ div[data-gadget-scope='maximize'] button {
 }
 .ui-icon-eye-slash::before {
   content: "\f070";
+}
+.ui-icon-warning::before {
+  content: "\f071";
 }
 .ui-icon-low-vision::before {
   content: "\f2a8";
