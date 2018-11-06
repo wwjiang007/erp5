@@ -79,7 +79,7 @@
 
 <tr>
   <td>click</td>
-  <td>//h1[@class="ui-title"]/a</td>
+  <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//h1/a</td>
   <td></td>
 </tr>
 
@@ -126,14 +126,14 @@
 
 <tr>
   <td>waitForElementPresent</td>
-  <td>//h1[@class="ui-title"]/a</td>
+  <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//h1/a</td>
   <td></td>
 </tr>
 
 
 <tr>
   <td>click</td>
-  <td>//h1[@class="ui-title"]/a</td>
+  <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//h1/a</td>
   <td></td>
 </tr>
 
@@ -212,7 +212,7 @@
 
 <tr>
   <td>click</td>
-  <td>//h1[@class="ui-title"]//a</td>
+  <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//h1//a</td>
   <td></td>
 </tr>
 
@@ -309,7 +309,7 @@
 <tr>
   <td>select</td>
   <td>//select</td>
-  <td>index=1</td>
+  <td>index=2</td>
 </tr>
 
 <tr>
@@ -327,7 +327,7 @@
 
 
 <tr>
-  <td>verifyValue</td>
+  <td>assertSelected</td>
   <td>//select</td>
   <td>Foo Listbox</td>
 </tr>
@@ -357,7 +357,7 @@
 <tr>
   <td>select</td>
   <td>//select</td>
-  <td>index=2</td>
+  <td>index=1</td>
 </tr>
 
 <tr>
@@ -375,7 +375,7 @@
 
 
 <tr>
-  <td>verifyValue</td>
+  <td>assertSelected</td>
   <td>//select</td>
   <td>Foo Line Listbox</td>
 </tr>

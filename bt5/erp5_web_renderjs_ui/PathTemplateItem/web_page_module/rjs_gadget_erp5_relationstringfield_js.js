@@ -22,6 +22,7 @@
             title: field_json.title,
             key: field_json.key,
             view: field_json.view,
+            search_view: field_json.search_view,
             url: field_json.url,
             allow_creation: field_json.allow_creation,
             portal_types: field_json.portal_types,
@@ -84,6 +85,13 @@
             };
           }
           return result;
+        });
+    }, {mutex: 'changestate'})
+
+    .declareMethod('checkValidity', function () {
+      return this.getDeclaredGadget("relation_input")
+        .push(function (input_gadget) {
+          return input_gadget.checkValidity();
         });
     }, {mutex: 'changestate'});
 

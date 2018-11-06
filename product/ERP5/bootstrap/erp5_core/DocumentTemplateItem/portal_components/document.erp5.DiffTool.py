@@ -42,6 +42,7 @@ except ImportError:
   warnings.warn("Please install unidiff, it is needed by Diff Tool",
                 DeprecationWarning)
 from AccessControl import ClassSecurityInfo
+from Products.ERP5Type.patches.diff import DeepDiff
 from Products.ERP5Type import Permissions
 from Products.ERP5Type.Globals import InitializeClass
 from Products.ERP5Type.Tool.BaseTool import BaseTool
@@ -134,7 +135,7 @@ class PortalPatch:
     new_value_dict = self.removePropertyList(self.new_value, export=True)
 
     # Get the DeepDiff in tree format.
-    tree_diff = deepdiff.DeepDiff(old_value_dict,
+    tree_diff = DeepDiff(old_value_dict,
                          new_value_dict,
                          view='tree')
     diff_tree_list = []
@@ -158,6 +159,13 @@ class PortalPatch:
     diff_list = []
     for val in diff_tree_list:
       new_val = {}
+
+      # In case both the old and new value are one of empty data type or None or
+      # an instance of 'deepdiff NotPresent', there is no need to show the empty
+      # diff, hence its better to continue
+      if ((not val.t1 or isinstance(val.t1, deepdiff.helper.NotPresent)) and
+          (not val.t2 or isinstance(val.t2, deepdiff.helper.NotPresent))):
+        continue
 
       diff = val.additional.get('diff', None)
       # If there is diff in additional property, save it separately
@@ -187,9 +195,16 @@ class PortalPatch:
         if (val.t2 == None) or isinstance(val.t2, deepdiff.helper.NotPresent):
           new_value = ''
 
+        # Deepdiff doesn't creates diff for anything other than string, thus for all other cases,
+        # we rely on difflib to maually create a diff.
         try:
-          # Create unified diff for single string cases
-          new_val['diff'] = ''.join(difflib.unified_diff([str(old_value)+'\n'], [str(new_value)+'\n'])).replace('\n', ' \n')
+          # If the old or new value is a multiline string, split the lines and then convert them
+          # to correct format of unified diff which can be displayed properly
+          if '\n' in str(old_value) or '\n' in str(old_value):
+            new_val['diff'] = ''.join(difflib.unified_diff(old_value.splitlines(1), new_value.splitlines(1))).replace('\n', ' \n')
+          else:
+            # Create unified diff for single string cases
+            new_val['diff'] = ''.join(difflib.unified_diff([str(old_value)+'\n'], [str(new_value)+'\n'])).replace('\n', ' \n')
         except ValueError:
           # Show empty diff in case of error in new or old value type
           new_val['diff'] = None
@@ -206,22 +221,25 @@ class PortalPatch:
 
   security.declarePrivate('removePropertyList')
   def removePropertyList(self,
-                       obj,
-                       export,
-                       property_list=None,
-                       keep_workflow_history=False,
-                       keep_workflow_history_last_history_only=False):
+                         obj,
+                         export,
+                         property_list=None,
+                         keep_workflow_history=False,
+                         keep_workflow_history_last_history_only=False):
     """
     This function removes un-necessary properties and attributes from the
     object dict.
     """
     if isinstance(obj, dict):
       obj_dict = obj.copy()
-      export = False
+      # Try to get the classname and module name from the dict
+      class_name = obj.get('portal_type', '')
+      module_name = obj.get('__module__', '')
     else:
       obj._p_activate()
       klass = obj.__class__
-      classname = klass.__name__
+      class_name = klass.__name__
+      module_name = klass.__module__
       obj_dict = obj.showDict().copy()
 
     attribute_set = {'_dav_writelocks', '_filepath', '_owner', '_related_index',
@@ -229,7 +247,7 @@ class PortalPatch:
                      '__ac_local_roles__', '__ac_local_roles_group_id_dict__',
                      'workflow_history', 'subject_set_uid_dict', 'security_uid_dict',
                      'filter_dict', '_max_uid', 'isIndexable', 'id', 'modification_date',
-                     'data'}
+                     'data', 'base_data'}
 
     # Update the list of properties which were explicitly given in parameters
     if property_list:
@@ -249,13 +267,13 @@ class PortalPatch:
         attribute_set.update(('func_code', 'func_defaults', '_code',
                          '_lazy_compilation', 'Python_magic', 'errors',
                          'warnings', '_proxy_roles'))
-      elif classname in ('File', 'Image'):
+      elif class_name in ('File', 'Image'):
         attribute_set.update(('_EtagSupport__etag', 'size'))
-      elif classname == 'SQL' and klass.__module__ == 'Products.ZSQLMethods.SQL':
+      elif class_name == 'SQL' and module_name == 'Products.ZSQLMethods.SQL':
         attribute_set.update(('_arg', 'template'))
       elif interfaces.IIdGenerator.providedBy(obj):
         attribute_set.update(('last_max_id_dict', 'last_id_dict'))
-      elif classname == 'Types Tool' and klass.__module__ == 'erp5.portal_type':
+      elif class_name == 'Types Tool' and module_name == 'erp5.portal_type':
         attribute_set.add('type_provider_list')
 
     for attribute in list(obj_dict.keys()):

@@ -307,7 +307,7 @@ class BusinessProcess(Path, XMLObject):
     # links wich are directly related to the current business link but DO NOT
     # narrow down the explanation else we might narrow down so much that
     # it becomes an empty set
-    closure_process = _getBusinessLinkClosure(explanation, business_link)
+    closure_process = _getBusinessLinkClosure(self, explanation, business_link)
     return closure_process.isTradeStatePartiallyCompleted(explanation,
                                                            predecessor_state)
 
@@ -875,11 +875,15 @@ class BusinessProcess(Path, XMLObject):
         # i.e. edit next phases to replace current phase by previous ones
         for next in next_set:
           phase_set = result[next]
-          phase_set.remove(phase)
+          # Not remove() as it may have already been removed earlier
+          # if >1 elements of next_set have the same parent
+          phase_set.discard(phase)
           phase_set |= previous_set
         # and previous phases to replace current by next ones
         for previous in previous_set:
           phase_set = next_dict[previous]
-          phase_set.remove(phase)
+          # Not remove() as it may have already been removed earlier
+          # if >1 elements of previous_set have the same child
+          phase_set.discard(phase)
           phase_set |= next_set
     return result

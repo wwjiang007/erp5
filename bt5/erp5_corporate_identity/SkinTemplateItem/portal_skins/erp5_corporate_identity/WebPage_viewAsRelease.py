@@ -24,6 +24,7 @@ import re
 from base64 import b64encode
 
 blank = ''
+pref = context.getPortalObject().portal_preferences
 re_tag = re.compile(r'<[^>]+>')
 
 # ------------------ HTML cleanup/converter methods ----------------------------
@@ -38,7 +39,7 @@ def removeHardcodedAbout(my_content):
 
 # -------------------------- Setup ---------------------------------------------
 release = context
-release_prefix = "Release."
+release_prefix = pref.getPreferredCorporateIdentityTemplateReleaseDocumentPrefix() or "Release."
 release_format = kw.get('format') or 'html'
 release_display_about = int(kw.get('display_about') or 0)
 release_display_svg = kw.get('display_svg') or "png"
@@ -77,7 +78,7 @@ if release_reference is None:
 release_full_reference = '-'.join([release_reference, release_version, release_language])
 
 # ---------------------------- Theme Parameters --------------------------------
-release_theme = release.Base_getThemeDict(doc_format=release_format, css_path="template_css/release")
+release_theme = release.Base_getThemeDict(doc_format=release_format, css_path="template_css/release", skin="Release")
 release_css = ''.join([
   'html .ci-press-release .ci-press-release-logo:before {',
     'background: url("%s") center no-repeat;' % (release_theme.get("theme_logo_url")),
@@ -133,7 +134,13 @@ if release_display_about:
     release_contributor_list=release.Base_getTemplateProxyParameter(parameter="author"),
     release_relative_url=release_relative_url,
   )
-  release_content = release_content.decode() + release_about.decode()
+  #release_content = release_content.decode() + release_about.decode()
+  if isinstance(release_content, unicode):
+    release_content = release_content.encode("UTF-8")
+  if isinstance(release_about, unicode):
+    release_about = release_about.encode("UTF-8")
+
+  release_content = release_content + release_about
 
 # ============================= Format: html ===================================
 if release_format == "html":

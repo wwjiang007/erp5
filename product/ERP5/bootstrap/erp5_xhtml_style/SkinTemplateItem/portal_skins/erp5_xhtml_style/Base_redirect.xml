@@ -50,7 +50,7 @@
         </item>
         <item>
             <key> <string>_params</string> </key>
-            <value> <string>redirect_url=None, keep_items=(), abort_transaction=False, **kw</string> </value>
+            <value> <string>redirect_url=None, keep_items=(), abort_transaction=False, status_code=302, **kw</string> </value>
         </item>
         <item>
             <key> <string>id</string> </key>

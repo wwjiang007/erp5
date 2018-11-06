@@ -30,7 +30,6 @@
 from random import randint
 import sys
 import unittest
-from unittest import expectedFailure
 from AccessControl import getSecurityManager
 from AccessControl.SecurityManagement import newSecurityManager
 from DateTime import DateTime
@@ -48,6 +47,10 @@ class IndexableDocument(ObjectManager):
   __allow_access_to_unprotected_subobjects__ = 1
   isRADContent = 0
 
+  def __init__(self, path):
+    super(IndexableDocument, self).__init__()
+    self._path = path
+
   def getUid(self):
     uid = getattr(self, 'uid', None)
     if uid is None:
@@ -62,9 +65,15 @@ class IndexableDocument(ObjectManager):
     raise AttributeError, name
 
   def getPath(self):
-    return '' # Whatever
+    return self._path
 
   def getRelativeUrl(self):
+    return '' # Whatever
+
+  def getRootDocumentPath(self):
+    return '' # Whatever
+
+  def SearchableText(self):
     return '' # Whatever
 
 class FooDocument(IndexableDocument):
@@ -2266,7 +2275,15 @@ VALUES
     sql_catalog.sql_catalog_role_keys = (
         'Assignee | %s.viewable_assignee_reference' % \
        local_roles_table,)
-
+    createZODBPythonScript(
+      self.portal.portal_skins.custom,
+      'ERP5Site_filterUserIdSet',
+      'group_and_user_id_set',
+      'actual_user_set = %r\n'
+      'return [x for x in group_and_user_id_set if x in actual_user_set]' % (
+        (user1, user2),
+      ),
+    )
     current_sql_search_tables = sql_catalog.sql_search_tables
     sql_catalog.sql_search_tables = sql_catalog.sql_search_tables + \
         [local_roles_table]
@@ -2315,6 +2332,7 @@ VALUES
       result = obj.portal_catalog(portal_type=portal_type, local_roles='Auditor')
       self.assertSameSet([obj2, ], [x.getObject() for x in result])
     finally:
+      self.portal.portal_skins.custom.manage_delObjects(ids=['ERP5Site_filterUserIdSet'])
       sql_catalog.sql_catalog_object_list = \
         current_sql_catalog_object_list
       sql_catalog.sql_clear_catalog = \
@@ -2432,7 +2450,14 @@ VALUES
     sql_catalog.sql_catalog_role_keys = (
         'Assignee | %s.viewable_assignee_reference' % \
        local_roles_table,)
-
+    createZODBPythonScript(
+      self.portal.portal_skins.custom,
+      'ERP5Site_filterUserIdSet',
+      'group_and_user_id_set',
+      'return [x for x in group_and_user_id_set if x == %r]' % (
+        user1,
+      ),
+    )
     current_sql_search_tables = sql_catalog.sql_search_tables
     sql_catalog.sql_search_tables = sql_catalog.sql_search_tables + \
         [local_roles_table]
@@ -2575,6 +2600,7 @@ VALUES
                                     **count_result_kw)))
 
     finally:
+      self.portal.portal_skins.custom.manage_delObjects(ids=['ERP5Site_filterUserIdSet'])
       sql_catalog.sql_catalog_object_list = \
         current_sql_catalog_object_list
       sql_catalog.sql_clear_catalog = \
@@ -2683,7 +2709,14 @@ VALUES
         'Owner | viewable_owner',
         'Assignee | %s.viewable_assignee_reference' % \
        local_roles_table,)
-
+    createZODBPythonScript(
+      self.portal.portal_skins.custom,
+      'ERP5Site_filterUserIdSet',
+      'group_and_user_id_set',
+      'return [x for x in group_and_user_id_set if x == %r]' % (
+        user1,
+      ),
+    )
     current_sql_search_tables = sql_catalog.sql_search_tables
     sql_catalog.sql_search_tables = sql_catalog.sql_search_tables + \
         [local_roles_table]
@@ -2818,6 +2851,7 @@ VALUES
                                     **count_result_kw)))
 
     finally:
+      self.portal.portal_skins.custom.manage_delObjects(ids=['ERP5Site_filterUserIdSet'])
       sql_catalog.sql_catalog_object_list = \
         current_sql_catalog_object_list
       sql_catalog.sql_clear_catalog = \
@@ -2827,17 +2861,12 @@ VALUES
       sql_catalog.sql_search_tables = current_sql_search_tables
       self.commit()
 
-  # Low priority bug, which needs a lot of time to be fixed
-  # Marked as expectedFailure
-  @expectedFailure
   def test_PersonDocumentWithMonovaluedLocalRole(self):
     """Test when user is added, which has local roles on own Person Document
 
     This is a case when Person document containting reference with local role
     which shall be monovalued is reindexed for first time.
     """
-    user = 'person_document_user_name'
-
     sql_connection = self.getSQLConnection()
     def query(sql):
       result = sql_connection.manage_test(sql)
@@ -2931,9 +2960,18 @@ VALUES
       self.portal.portal_caches.clearAllCache()
       self.commit()
 
-      person = self.portal.person_module.newContent(portal_type='Person',
-          reference=user)
-      person.manage_setLocalRoles(user, ['Assignee'])
+      person = self.portal.person_module.newContent(portal_type='Person')
+      user_id = person.Person_getUserId()
+      createZODBPythonScript(
+        self.portal.portal_skins.custom,
+        'ERP5Site_filterUserIdSet',
+        'group_and_user_id_set',
+        'return [x for x in group_and_user_id_set if x == %r]' % (
+          user_id,
+        ),
+      )
+      person.manage_setLocalRoles(user_id, ['Assignee'])
+
       self.tic()
 
       roles_and_users_result = query('select * from roles_and_users where uid = (select security_uid from catalog where uid = %s)' % person.getUid())
@@ -2945,8 +2983,9 @@ VALUES
           ['Assignee', 'Assignor', 'Associate', 'Auditor', 'Author', 'Manager']
       )
       # check that user has optimised security declaration
-      self.assertEqual(local_roles_table_result['viewable_assignee_reference'], user)
+      self.assertEqual(local_roles_table_result['viewable_assignee_reference'], user_id)
     finally:
+      self.portal.portal_skins.custom.manage_delObjects(ids=['ERP5Site_filterUserIdSet'])
       sql_catalog.sql_catalog_object_list = \
         current_sql_catalog_object_list
       sql_catalog.sql_clear_catalog = \
@@ -3316,8 +3355,8 @@ VALUES
 
     # Create some dummy documents
     portal = self.getPortalObject()
-    portal.foo = FooDocument()
-    portal.bar = BarDocument()
+    portal.foo = FooDocument(portal.getPath() + '/foo')
+    portal.bar = BarDocument(portal.getPath() + '/bar')
 
     # Get instances, wrapping them in acquisition context implicitely.
     foo = portal.foo

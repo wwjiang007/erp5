@@ -67,7 +67,6 @@ class SlapOSMasterCommunicator(object):
     self.slap_order = slap_order
     self.slap_supply = slap_supply
     self.hateoas_navigator = self.slap._hateoas_navigator
-    self.hosting_subscription_url = None
 
     if url is not None and \
       url.startswith(SOFTWARE_PRODUCT_NAMESPACE):
@@ -183,18 +182,19 @@ class SlapOSMasterCommunicator(object):
 
   @retryOnNetworkFailure
   def getInstanceUrlList(self):
-    if self.hosting_subscription_url is None:
-      hosting_subscription_dict = self.hateoas_navigator._hateoas_getHostingSubscriptionDict()
-      for hs in hosting_subscription_dict:
-        if hs['title'] == self.name:
-          self.hosting_subscription_url = hs['href'] 
-          break 
+    hosting_subscription_dict = self.hateoas_navigator._hateoas_getHostingSubscriptionDict()
+    # Don't store hosting subscription url. It changes from time to time.
+    hosting_subscription_url = None
+    for hs in hosting_subscription_dict:
+      if hs['title'] == self.name:
+        hosting_subscription_url = hs['href']
+        break
 
-    if self.hosting_subscription_url is None:
+    if hosting_subscription_url is None:
       return None
 
     return self.hateoas_navigator.getHateoasInstanceList(
-            self.hosting_subscription_url)
+            hosting_subscription_url)
 
   @retryOnNetworkFailure
   def getNewsFromInstance(self, url):
@@ -468,10 +468,8 @@ class SlapOSTester(SlapOSMasterCommunicator):
       information = self.getInformationFromInstance(instance["href"])
       if "frontend-" in instance["title"]:
         try:
-          # TODO: this should get "secure_access" value (https). Until having a
-          # valid certificate, the "site_url" (http) will be used.
           frontend = [instance["title"].replace("frontend-", ""),
-                      information["connection_dict"]["site_url"]]
+                      information["connection_dict"]["secure_access"]]
           frontend_url_list.append(frontend)
         except Exception as e:
           logger.info("Frontend url not generated yet for instance: " + instance["title"])

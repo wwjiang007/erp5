@@ -443,8 +443,8 @@ class ERP5TypeInformation(XMLObject,
       if kw:
         ob._edit(force_update=1, **kw)
 
-      if not temp_object:
-        # As we juste created ob, we assume the whole subtree is of a
+      if not temp_object and immediate_reindex is not None:
+        # As we just created ob, we assume the whole subtree is of a
         # reasonable size and hence can be walked in current transaction.
         # Subtree may come from:
         # - acquired setter (ex: address on a Person which actually exists on
@@ -455,6 +455,10 @@ class ERP5TypeInformation(XMLObject,
         # - if ImmediateReindexContextManager is used, anything until
         #   context manager exits.
         method = ob._reindexOnCreation
+        if activate_kw is not None:
+          if reindex_kw is None:
+            reindex_kw = {}
+          reindex_kw.setdefault('activate_kw', {}).update(activate_kw)
         if reindex_kw is not None:
           method = partial(method, **reindex_kw)
         if isinstance(immediate_reindex, ImmediateReindexContextManager):

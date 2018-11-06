@@ -12,7 +12,8 @@ lockGadgetInQueue, unlockGadgetInQueue, unlockGadgetInFailedQueue*/
     "svg_editor" : {"url": "method-draw/method-draw.gadget.html"},
     "minipaint": {"url": "minipaint.gadget.html"},
     "jquery-sheets": {"url": "jquery-sheets.gadget.html"},
-    "pdf": {"url": "pdf_js/pdfjs.gadget.html"}
+    "pdf": {"url": "pdf_js/pdfjs.gadget.html"},
+    "notebook_editor": {"url": "gadget_notebook.html"}
   };
 
 
@@ -71,12 +72,14 @@ lockGadgetInQueue, unlockGadgetInQueue, unlockGadgetInFailedQueue*/
         queue = lockGadgetInQueue(gadget)();
 
       if ((modification_dict.hasOwnProperty('editable')) ||
-          (modification_dict.hasOwnProperty('editor'))) {
+          (modification_dict.hasOwnProperty('editor')) || 
+          (gadget.state.editor == 'notebook_editor')) {
         // Clear first to DOM, append after to reduce flickering/manip
         while (element.firstChild) {
           element.removeChild(element.firstChild);
         }
-        if (modification_dict.hasOwnProperty('maximize')) {
+        if (modification_dict.hasOwnProperty('maximize') || 
+          (gadget.state.editor == 'notebook_editor')) {
           // for fck_editor fields, we want to be able to maximize also in non editable
           if ((gadget.state.maximize && gadget.state.editable) ||
               (gadget.state.maximize && gadget.state.editor === 'fck_editor')) {
@@ -201,6 +204,11 @@ lockGadgetInQueue, unlockGadgetInQueue, unlockGadgetInFailedQueue*/
         return result;
       }
       return {};
+    })
+
+    .declareMethod('checkValidity', function () {
+      // XXX How to implement this for editors?
+      return true;
     });
 
 }(window, rJS, RSVP, document, FileReader, Blob,

@@ -932,7 +932,7 @@ class CategoryTool(BaseTool):
                             spec=spec, filter=filter, **kw ) # Not acquired because this is the first try
                                                              # to get a local defined category
 
-      base_category_value = self.getCategoryValue(base_category)
+      base_category_value = self.get(base_category)
       #LOG("result", 0, str(result))
       if base_category_value is not None:
         # If we do not mask or append, return now if not empty
@@ -943,10 +943,7 @@ class CategoryTool(BaseTool):
           return self._filterCategoryListByPermission(base_category, base, result, checked_permission)
         # First we look at local ids
         for object_id in base_category_value.getAcquisitionObjectIdList():
-          try:
-            my_acquisition_object = context[object_id]
-          except (KeyError, AttributeError):
-            my_acquisition_object = None
+          my_acquisition_object = context.get(object_id)
           if my_acquisition_object is not None:
             #my_acquisition_object_path = my_acquisition_object.getPhysicalPath()
             #if my_acquisition_object_path in acquired_object_dict:
@@ -1189,11 +1186,19 @@ class CategoryTool(BaseTool):
     security.declareProtected( Permissions.ModifyPortalContent, '_setCategoryList' )
     def _setCategoryList(self, context, value):
       old = set(getattr(aq_base(context), 'categories', ()))
+      relative_url = context.getRelativeUrl()
+
+      # Pure category are member of itself, but we don't store this membership
+      # (because of issues when the category is renamed/moved or cloned)
+      if getattr(context, 'isCategory', 0) and relative_url in value:
+        # note that we don't want to cast as set at this point to keep ordering (and duplicates).
+        value = [x for x in tuple(value) if x != relative_url]
+
       context.categories = value = tuple(value)
       if context.isTempDocument():
         return
+
       value = set(value)
-      relative_url = context.getRelativeUrl()
       for edit, value in ("remove", old - value), ("add", value - old):
         for path in value:
           base = self.getBaseCategoryId(path)

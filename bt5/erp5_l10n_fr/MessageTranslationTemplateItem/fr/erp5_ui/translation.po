@@ -2449,6 +2449,9 @@ msgstr "Changer le mot de passe"
 msgid "Change State"
 msgstr "Changer d'état"
 
+msgid "Channel"
+msgstr "Canal"
+
 msgid "Chat Address"
 msgstr "Adresse de Messagerie Instantanée"
 
@@ -2805,6 +2808,12 @@ msgstr "Colonne"
 
 msgid "Comment"
 msgstr "Commentaire"
+
+msgid "Comment Author"
+msgstr "Auteur du commentaire"
+
+msgid "Comment Date"
+msgstr "Date du commentaire"
 
 msgid "Comment Message"
 msgstr "Message"
@@ -8167,6 +8176,9 @@ msgstr "Ouvert"
 msgid "Open the account and helps input transactions on it"
 msgstr "Permet d'ouvrir un compte et d'y ajouter des transactions."
 
+msgid "Opened [state in ticket_workflow]"
+msgstr "Ouvert"
+
 msgid "Opening Balance"
 msgstr "Soldes Initiaux"
 
@@ -10099,6 +10111,9 @@ msgstr "Commande Reçue le"
 msgid "Recent Changes"
 msgstr "Changements récents"
 
+msgid "Recent Updates"
+msgstr "Modifications récentes"
+
 msgid "Recipient"
 msgstr "Destinataire"
 
@@ -10596,6 +10611,12 @@ msgstr "Demandeur"
 
 msgid "Requester"
 msgstr "Demandé par"
+
+msgid "Requester Language"
+msgstr "Langue du demandeur"
+
+msgid "Requester Reference"
+msgstr "Référence du demandeur"
 
 msgid "Required Material"
 msgstr "Matériel requis"
@@ -11263,7 +11284,7 @@ msgstr "Sélectionnez le document approprié dans la liste."
 msgid "Select non reconciled transcations finished"
 msgstr "Selection des écritures non rapprochées terminée"
 
-msgid "Select the number of user accounts you want to configure"
+msgid "Select the Number of User Accounts you Want to Configure"
 msgstr "Sélectionnez le nombre de comptes utilisateur à configurer"
 
 msgid "Sell"
@@ -12338,7 +12359,7 @@ msgid "Support Request Detailed Report"
 msgstr "Rapport détaillé"
 
 msgid "Support Request Module"
-msgstr "Module de demande d'assistance"
+msgstr "Module des demandes d'assistance"
 
 msgid "Support Request Status"
 msgstr "État"
@@ -12351,6 +12372,15 @@ msgstr "Types des demandes d'assistance"
 
 msgid "Support Requests"
 msgstr "Demandes d'assistance"
+
+msgid "Support Requests to Close"
+msgstr "Demandes d'assistances à fermer"
+
+msgid "Support Requests to Open"
+msgstr "Demandes d'assistances à ouvrir"
+
+msgid "Support Requests to Submit"
+msgstr "Demandes d'assistances à soumettre"
 
 msgid "Surcharge Ratio"
 msgstr "Ratio de surcharge"
@@ -12370,13 +12400,22 @@ msgstr "Prénom"
 msgid "Suspend Project"
 msgstr "Suspendre le projet"
 
+msgid "Suspend Ticket"
+msgstr "Suspendre le ticket"
+
 msgid "Suspended"
 msgstr "Suspendu"
+
+msgid "Suspended Support Requests"
+msgstr "Demande d'assistance suspendues"
 
 msgid "Suspended [state in open_order_workflow]"
 msgstr "Suspendu"
 
 msgid "Suspended [state in project_workflow]"
+msgstr "Suspendu"
+
+msgid "Suspended [state in ticket_workflow]"
 msgstr "Suspendu"
 
 msgid "Symbol"
@@ -14551,19 +14590,19 @@ msgstr "Bienvenue. Vous êtes connecté."
 msgid "What email address should be used as From email address for automatically generated emails?"
 msgstr "Quelle adresse email souhaitez vous utilisez pour les envois automatiques d'emails depuis votre instance? (pour la GRC par exemple)"
 
-msgid "What is the begin date of your current accounting period?"
+msgid "What is the Begin Date of your Current Accounting Period?"
 msgstr "A quelle date a débuté votre exercice en cours?"
 
-msgid "What is the currency used in your company?"
+msgid "What is the Currency Used in your Company?"
 msgstr "Quelle devise souhaitez vous utiliser?"
 
-msgid "What is the name of this period?"
+msgid "What is the Name of this Period?"
 msgstr "Quel nom souhaitez vous utiliser pour cette période?"
 
-msgid "What is the name of your company?"
+msgid "What is the Name of your Company?"
 msgstr "Quel est le nom de votre entreprise?"
 
-msgid "What will be the end date of your current accounting period?"
+msgid "What will be the End Date of your Current Accounting Period?"
 msgstr "Quelle est la date de fin de votre exercice en cours?"
 
 msgid "When a user of ERP5 wants to materialize a purchase that has been done by his company, he or she should use a purchase order. Purchase orders contain some general information about the buyer and the seller, and contain purchase order lines."
@@ -14575,13 +14614,13 @@ msgstr "salarié qui n'est pas physiquement présent sur son lieu de travail."
 msgid "When the employee is present physically at work, and he is not in overtime"
 msgstr "Le salarié est présent physiquement sur son lieu de travail et n'est pas en heures supplémentaires"
 
-msgid "Which accouting plan do you use?"
+msgid "Which Accounting Plan do you Use"
 msgstr "Quel plan comptable souhaitez vous utiliser?"
 
-msgid "Which date format do you use?"
+msgid "Which Date Format do you Use?"
 msgstr "Quel format souhaitez vous utiliser pour vos dates?"
 
-msgid "Which translations do you want to use?"
+msgid "Which Translations do you Want to Use?"
 msgstr "Quelles langues souhaitez vous utiliser?"
 
 msgid "Width"

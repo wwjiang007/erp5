@@ -86,6 +86,7 @@ from Products.ERP5Type.Accessor.TypeDefinition import asDate
 from Products.ERP5Type.Message import Message
 from Products.ERP5Type.ConsistencyMessage import ConsistencyMessage
 from Products.ERP5Type.UnrestrictedMethod import UnrestrictedMethod, super_user
+from Products.ERP5Type.mixin.json_representable import JSONRepresentableMixin
 
 from zope.interface import classImplementsOnly, implementedBy
 
@@ -481,6 +482,7 @@ def getClassPropertyList(klass):
         if p not in ps_list])
   return ps_list
 
+from Products.ERP5Type.Accessor import WorkflowHistory as WorkflowHistoryAccessor
 def initializePortalTypeDynamicWorkflowMethods(ptype_klass, portal_workflow):
   """We should now make sure workflow methods are defined
   and also make sure simulation state is defined."""
@@ -518,6 +520,21 @@ def initializePortalTypeDynamicWorkflowMethods(ptype_klass, portal_workflow):
 
       storage = dc_workflow_dict
       transitions = wf.transitions
+
+      for transition in transitions.objectValues():
+        transition_id = transition.getId()
+        list_method_id = 'get%sTransitionDateList' % UpperCase(transition_id)
+        if not hasattr(ptype_klass, list_method_id):
+          method = WorkflowHistoryAccessor.ListGetter(list_method_id, wf_id, transition_id, 'time')
+          ptype_klass.registerAccessor(method,
+                                       Permissions.AccessContentsInformation)
+
+        method_id = 'get%sTransitionDate' % UpperCase(transition_id)
+        if not hasattr(ptype_klass, method_id):
+          method = WorkflowHistoryAccessor.Getter(method_id, list_method_id)
+          ptype_klass.registerAccessor(method,
+                                       Permissions.AccessContentsInformation)
+
     elif wf_type == "InteractionWorkflowDefinition":
       storage = interaction_workflow_dict
       transitions = wf.interactions
@@ -675,7 +692,8 @@ class Base( CopyContainer,
             ActiveObject,
             OFS.History.Historical,
             ERP5PropertyManager,
-            PropertyTranslatableBuiltInDictMixIn
+            PropertyTranslatableBuiltInDictMixIn,
+            JSONRepresentableMixin,
             ):
   """
     This is the base class for all ERP5 Zope objects.
@@ -2844,30 +2862,35 @@ class Base( CopyContainer,
       self.activate(**activate_kw).immediateReindexObject(**kw)
 
   def _getReindexAndActivateParameterDict(self, kw, activate_kw):
-    if activate_kw is None:
-      activate_kw = ()
+    # Lowest activate_kw priority: default activate parameter dict
+    full_activate_kw = self.getDefaultActivateParameterDict(
+      # It is the responsibility of activity spawning to pull placeless
+      # activate parameters. Skip them here.
+      inherit_placeless=False,
+    )
     reindex_kw = self.getDefaultReindexParameterDict()
     if reindex_kw is not None:
       reindex_kw = reindex_kw.copy()
-      reindex_activate_kw = reindex_kw.pop('activate_kw', None) or {}
-      reindex_activate_kw.update(activate_kw)
+      # Next activate_kw priority: default reindex parameter dict's
+      # "activate_kw" entry, if any.
+      full_activate_kw.update(reindex_kw.pop('activate_kw', None) or ())
+      # kw is not expected to contain an "activate_kw" entry.
       reindex_kw.update(kw)
       kw = reindex_kw
-      activate_kw = reindex_activate_kw
-    else:
-      activate_kw = dict(activate_kw)
+    # And top activate_kw priority: the direct parameter.
+    full_activate_kw.update(activate_kw or ())
     group_id_list  = []
     if kw.get("group_id") not in ('', None):
       group_id_list.append(kw["group_id"])
     if kw.get("sql_catalog_id") not in ('', None):
       group_id_list.append(kw["sql_catalog_id"])
-    if activate_kw.get('group_id') not in ('', None):
-      group_id_list.append(activate_kw['group_id'])
-    activate_kw['group_id'] = ' '.join(group_id_list)
-    activate_kw['group_method_id'] = 'portal_catalog/catalogObjectList'
-    activate_kw['alternate_method_id'] = 'alternateReindexObject'
-    activate_kw['activity'] = 'SQLDict'
-    return kw, activate_kw
+    if full_activate_kw.get('group_id') not in ('', None):
+      group_id_list.append(full_activate_kw['group_id'])
+    full_activate_kw['group_id'] = ' '.join(group_id_list)
+    full_activate_kw['group_method_id'] = 'portal_catalog/catalogObjectList'
+    full_activate_kw['alternate_method_id'] = 'alternateReindexObject'
+    full_activate_kw['activity'] = 'SQLDict'
+    return kw, full_activate_kw
 
   security.declarePublic('recursiveReindexObject')
   recursiveReindexObject = reindexObject

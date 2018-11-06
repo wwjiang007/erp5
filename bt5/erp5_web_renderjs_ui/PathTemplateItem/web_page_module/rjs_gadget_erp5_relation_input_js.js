@@ -98,8 +98,8 @@
           options: {
             page: "relation_search",
             url: gadget.state.url,
+            view: gadget.state.search_view,
             extended_search: extended_search,
-            view: gadget.state.view,
             back_field: gadget.state.key,
             relation_index: gadget.state.relation_index
           },
@@ -134,6 +134,7 @@
         title: options.title,
         key: options.key,
         view: options.view,
+        search_view: options.search_view,
         url: options.url,
         allow_creation: options.allow_creation,
         portal_types: JSON.stringify(options.portal_types),
@@ -445,8 +446,18 @@
     }, true, false)
 
     .declareMethod('checkValidity', function () {
+      if ((this.state.value_text) && (
+          (this.state.value_relative_url === null) &&
+            (this.state.value_uid === null) &&
+            (this.state.value_portal_type === null)
+        )) {
+        return this.notifyInvalid("No such document was found")
+          .push(function () {
+            return false;
+          });
+      }
       return true;
-    })
+    }, {mutex: 'changestate'})
 
     // XXX Use html5 input
     .onEvent('invalid', function (evt) {
@@ -455,10 +466,7 @@
     }, true, false)
 
     .onEvent('change', function () {
-      return RSVP.all([
-        this.checkValidity(),
-        this.notifyChange()
-      ]);
+      return this.notifyChange();
     }, false, false)
 
 

@@ -1,38 +1,54 @@
 <tal:block xmlns:tal="http://xml.zope.org/namespaces/tal"
            xmlns:metal="http://xml.zope.org/namespaces/metal">
-  <tal:block metal:define-macro="save">
+  <tal:block metal:define-macro="click_save">
     <tr>
-      <td colspan="3"><b>Save</b></td>
+      <td colspan="3"><b>Click on Save</b></td>
     </tr>
     <tr>
      <td>waitForElementPresent</td>
-     <td>//button[@data-i18n='Save']</td>
-     <td></td>
-    </tr>
-    <tr>
-     <td>waitForElementNotPresent</td>
-     <td>//button[@data-i18n='Save'][contains(@class, "ui-disabled")]</td>
-     <td></td>
-    </tr>
-    <tr>
-     <td>assertElementNotPresent</td>
-     <td>//button[@data-i18n='Save'][contains(@class, "ui-disabled")]</td>
+     <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//button[@data-i18n='Save']</td>
      <td></td>
     </tr>
     <tr>
      <td>assertElementPresent</td>
-     <td>//button[@data-i18n='Save']</td>
+     <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//button[@data-i18n='Save']</td>
+     <td></td>
+    </tr>
+    <tr>
+     <td>waitForElementNotPresent</td>
+     <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//button[@data-i18n='Save'][contains(@class, "ui-disabled")]</td>
+     <td></td>
+    </tr>
+    <tr>
+     <td>assertElementNotPresent</td>
+     <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//button[@data-i18n='Save'][contains(@class, "ui-disabled")]</td>
+     <td></td>
+    </tr>
+    <tr>
+     <td>assertElementPresent</td>
+     <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//button[@data-i18n='Save']</td>
      <td></td>
     </tr>
     <tr>
      <td>click</td>
-     <td>//button[@data-i18n='Save']</td>
+     <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//button[@data-i18n='Save']</td>
      <td></td>
+    </tr>
+  </tal:block>
+  <tal:block metal:define-macro="save">
+    <tal:block metal:use-macro="here/Zuite_CommonTemplateForRenderjsUi/macros/click_save" />
+    <tr>
+      <td colspan="3"><b>Save</b></td>
     </tr>
     <!-- First loader while calling Base_edit -->
     <tr>
       <td>waitForElementPresent</td>
-      <td>//h1[@class="ui-title"]//a[contains(@class, "ui-icon-spinner")]</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//h1//*[contains(@class, "ui-icon-spinner")]</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>assertElementPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//h1//*[contains(@class, "ui-icon-spinner")]</td>
       <td></td>
     </tr>
     <!-- Save Button is disabled  -->
@@ -68,6 +84,7 @@
     <tal:block metal:use-macro="here/Zuite_CommonTemplateForRenderjsUi/macros/triggle_filter" />
     <tal:block metal:use-macro="here/Zuite_CommonTemplateForRenderjsUi/macros/trash_editor_configuration" />
     <tal:block metal:use-macro="here/Zuite_CommonTemplateForRenderjsUi/macros/submit_filter" />
+    <tal:block metal:use-macro="here/Zuite_CommonTemplateForRenderjsUi/macros/wait_for_content_loaded" />
     <tal:block metal:use-macro="here/Zuite_CommonTemplateForRenderjsUi/macros/wait_for_listbox_loaded" />
   </tal:block>
 
@@ -77,7 +94,7 @@
     </tr>
     <tr>
       <td>waitForElementPresent</td>
-      <td>//button[@class='plus ui-btn-c ui-override-theme ui-btn ui-icon-plus ui-btn-icon-left ui-corner-all']</td>
+      <td>//button[@class='plus ui-icon-plus ui-btn-icon-left']</td>
       <td></td>
     </tr>
     <tr>
@@ -255,9 +272,19 @@
       <td>//div[@class="ui-icon-spinner ui-btn-icon-notext first-loader"]</td>
       <td></td>
     </tr>
+    <tr>
+      <td>assertElementPresent</td>
+      <td>//div[@class="ui-icon-spinner ui-btn-icon-notext first-loader"]</td>
+      <td></td>
+    </tr>
 
     <tr>
       <td>waitForElementNotPresent</td>
+      <td>//div[@class="ui-icon-spinner ui-btn-icon-notext first-loader"]</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>assertElementNotPresent</td>
       <td>//div[@class="ui-icon-spinner ui-btn-icon-notext first-loader"]</td>
       <td></td>
     </tr>
@@ -272,15 +299,35 @@
     </tr>
     <tr>
       <td>waitForElementPresent</td>
-      <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//h1[@class="ui-title"]//*[contains(@class, "ui-icon-spinner")]</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//h1//*[contains(@class, "ui-icon-spinner")]</td>
       <td></td>
+    </tr>
+    <tr>
+      <td>waitForElementNotPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//h1//*[contains(@class, "ui-icon-spinner")]</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td colspan="3"><p></p></td>
+    </tr>
+  </tal:block>
+
+  <tal:block metal:define-macro="wait_for_dialog_loaded">
+    <tr>
+      <td colspan="3"><b>Wait for the dialog to be loaded</b></td>
     </tr>
 
     <tr>
-      <td>waitForElementNotPresent</td>
-      <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//h1[@class="ui-title"]//*[contains(@class, "ui-icon-spinner")]</td>
+      <td>waitForElementPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_pt_form_dialog.html')]//form//div[@class="dialog_button_container"]//input[@name="action_confirm"]</td>
       <td></td>
     </tr>
+    <tr>
+      <td>assertElementPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_pt_form_dialog.html')]//form//div[@class="dialog_button_container"]//input[@name="action_confirm"]</td>
+      <td></td>
+    </tr>
+
     <tr>
       <td colspan="3"><p></p></td>
     </tr>
@@ -302,12 +349,12 @@
     </tr>
     <tr>
       <td>waitForElementPresent</td>
-      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_field_listbox.html\')]//nav//span[@class=\'ui-disabled ui-right\' and text()=\'%(footer)s\']' % pagination_configuration"></td>
+      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_field_listbox.html\')]//nav//span[@class=\'ui-disabled\' and text()=\'%(footer)s\']' % pagination_configuration"></td>
       <td></td>
     </tr>
     <tr>
       <td>assertElementPresent</td>
-      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_field_listbox.html\')]//nav//span[@class=\'ui-disabled ui-right\' and text()=\'%(footer)s\']' % pagination_configuration"></td>
+      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_field_listbox.html\')]//nav//span[@class=\'ui-disabled\' and text()=\'%(footer)s\']' % pagination_configuration"></td>
       <td></td>
     </tr>
     <tr>
@@ -340,12 +387,12 @@
     </tr>
     <tr>
       <td>waitForElementPresent</td>
-      <td>//h1[@class="ui-title"]//span[contains(@class, "ui-icon-spinner")]</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//h1//span[contains(@class, "ui-icon-spinner")]</td>
       <td></td>
     </tr>
     <tr>
       <td>waitForElementNotPresent</td>
-      <td>//h1[@class="ui-title"]//span[contains(@class, "ui-icon-spinner")]</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_header.html')]//h1//span[contains(@class, "ui-icon-spinner")]</td>
       <td></td>
     </tr>
     <tr>
@@ -711,12 +758,12 @@
     </tr>
     <tr>
       <td>waitForElementPresent</td>
-      <td>//div[contains(@data-gadget-url, 'gadget_erp5_search_editor.html')]//button[@class='plus ui-btn-c ui-override-theme ui-btn ui-icon-plus ui-btn-icon-left ui-corner-all']</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_search_editor.html')]//button[@class='plus ui-icon-plus ui-btn-icon-left']</td>
       <td></td>
     </tr>
     <tr>
       <td>click</td>
-      <td>//div[contains(@data-gadget-url, 'gadget_erp5_search_editor.html')]//button[@class='plus ui-btn-c ui-override-theme ui-btn ui-icon-plus ui-btn-icon-left ui-corner-all']</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_search_editor.html')]//button[@class='plus ui-icon-plus ui-btn-icon-left']</td>
       <td></td>
     </tr>
     <tr>
@@ -740,7 +787,7 @@
     </tr>
     <tr>
       <td>assertElementNotPresent</td>
-      <td>//div[contains(@data-gadget-url, 'gadget_erp5_sort_editor.html')]//button[@class='plus ui-btn-c ui-override-theme ui-btn ui-icon-plus ui-btn-icon-left ui-corner-all']</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_sort_editor.html')]//button[@class='plus ui-icon-plus ui-btn-icon-left']</td>
       <td></td>
     </tr>
     <tr>
@@ -750,12 +797,12 @@
     </tr>
     <tr>
       <td>waitForElementPresent</td>
-      <td>//div[contains(@data-gadget-url, 'gadget_erp5_sort_editor.html')]//button[@class='plus ui-btn-c ui-override-theme ui-btn ui-icon-plus ui-btn-icon-left ui-corner-all']</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_sort_editor.html')]//button[@class='plus ui-icon-plus ui-btn-icon-left']</td>
       <td></td>
     </tr>
     <tr>
       <td>assertElementPresent</td>
-      <td>//div[contains(@data-gadget-url, 'gadget_erp5_sort_editor.html')]//button[@class='plus ui-btn-c ui-override-theme ui-btn ui-icon-plus ui-btn-icon-left ui-corner-all']</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_sort_editor.html')]//button[@class='plus ui-icon-plus ui-btn-icon-left']</td>
       <td></td>
     </tr>
     <tr>
@@ -793,7 +840,7 @@
     </tr>
     <tr>
       <td>click</td>
-      <td>//div[contains(@data-gadget-url, 'gadget_erp5_search_editor.html')]//button[@class="submit responsive ui-last-child ui-btn ui-btn-icon-left ui-icon-check"]</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_search_editor.html')]//button[@class="ui-btn-icon-left ui-icon-check"]</td>
       <td></td>
     </tr>
     <tr>
@@ -922,7 +969,7 @@
     </tr>
     <tr>
       <td>assertElementNotPresent</td>
-      <td>//div[contains(@data-gadget-url, 'gadget_erp5_configure_editor.html')]//button[@class='plus ui-btn-c ui-override-theme ui-btn ui-icon-plus ui-btn-icon-left ui-corner-all']</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_configure_editor.html')]//button[@class='plus ui-icon-plus ui-btn-icon-left']</td>
       <td></td>
     </tr>
     <tr>
@@ -932,12 +979,12 @@
     </tr>
     <tr>
       <td>waitForElementPresent</td>
-      <td>//div[contains(@data-gadget-url, 'gadget_erp5_configure_editor.html')]//button[@class='plus ui-btn-c ui-override-theme ui-btn ui-icon-plus ui-btn-icon-left ui-corner-all']</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_configure_editor.html')]//button[@class='plus ui-icon-plus ui-btn-icon-left']</td>
       <td></td>
     </tr>
     <tr>
       <td>assertElementPresent</td>
-      <td>//div[contains(@data-gadget-url, 'gadget_erp5_configure_editor.html')]//button[@class='plus ui-btn-c ui-override-theme ui-btn ui-icon-plus ui-btn-icon-left ui-corner-all']</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_configure_editor.html')]//button[@class='plus ui-icon-plus ui-btn-icon-left']</td>
       <td></td>
     </tr>
     <tr>
@@ -951,7 +998,7 @@
     </tr>
     <tr>
       <td>click</td>
-      <td>//div[contains(@data-gadget-url, 'gadget_erp5_configure_editor.html')]//button[@class="submit responsive ui-last-child ui-btn ui-btn-icon-left ui-icon-check"]</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_configure_editor.html')]//button[@class="submit ui-btn-icon-left ui-icon-check"]</td>
       <td></td>
     </tr>
     <tr>
@@ -979,12 +1026,12 @@
     </tr>
     <tr>
       <td>waitForElementPresent</td>
-      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_editor_panel.html\')]//button[@class=\'trash ui-btn-c ui-override-theme ui-btn ui-icon-trash-o ui-btn-icon-left ui-corner-all\']'"></td>
+      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_editor_panel.html\')]//button[@class=\'trash ui-icon-trash-o ui-btn-icon-left\']'"></td>
       <td></td>
     </tr>
     <tr>
       <td>click</td>
-      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_editor_panel.html\')]//button[@class=\'trash ui-btn-c ui-override-theme ui-btn ui-icon-trash-o ui-btn-icon-left ui-corner-all\']'"></td>
+      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_editor_panel.html\')]//button[@class=\'trash ui-icon-trash-o ui-btn-icon-left\']'"></td>
       <td></td>
     </tr>
     <tr>
@@ -998,22 +1045,22 @@
     </tr>
     <tr>
       <td>waitForElementPresent</td>
-      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_configure_editor.html\')]//div[@class=\'column_item_container ui-controlgroup ui-corner_all\']/div[%i]' % (configure_section_configuration['index'] + 1)"></td>
+      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_configure_editor.html\')]//div[@class=\'column_item_container\']/div[%i]' % (configure_section_configuration['index'] + 1)"></td>
       <td></td>
     </tr>
     <tr>
       <td>focus</td>
-      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_configure_editor.html\')]//div[@class=\'column_item_container ui-controlgroup ui-corner_all\']/div[%i]//button' % (configure_section_configuration['index'] + 1)"></td>
+      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_configure_editor.html\')]//div[@class=\'column_item_container\']/div[%i]//button' % (configure_section_configuration['index'] + 1)"></td>
       <td></td>
     </tr>
     <tr>
       <td>click</td>
-      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_configure_editor.html\')]//div[@class=\'column_item_container ui-controlgroup ui-corner_all\']/div[%i]//button' % (configure_section_configuration['index'] + 1)"></td>
+      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_configure_editor.html\')]//div[@class=\'column_item_container\']/div[%i]//button' % (configure_section_configuration['index'] + 1)"></td>
       <td></td>
     </tr>
     <tr>
       <td>waitForElementNotPresent</td>
-      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_configure_editor.html\')]//div[@class=\'column_item_container ui-controlgroup ui-corner_all\']/div[%i]' % (configure_section_configuration['index'] + 1)"></td>
+      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_configure_editor.html\')]//div[@class=\'column_item_container\']/div[%i]' % (configure_section_configuration['index'] + 1)"></td>
       <td></td>
     </tr>
     <tr>
@@ -1027,12 +1074,12 @@
     </tr>
     <tr>
       <td>waitForElementPresent</td>
-      <td>//div[contains(@data-gadget-url, 'gadget_erp5_configure_editor.html')]//button[@class='plus ui-btn-c ui-override-theme ui-btn ui-icon-plus ui-btn-icon-left ui-corner-all']</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_configure_editor.html')]//button[@class='plus ui-icon-plus ui-btn-icon-left']</td>
       <td></td>
     </tr>
     <tr>
       <td>click</td>
-      <td>//div[contains(@data-gadget-url, 'gadget_erp5_configure_editor.html')]//button[@class='plus ui-btn-c ui-override-theme ui-btn ui-icon-plus ui-btn-icon-left ui-corner-all']</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_configure_editor.html')]//button[@class='plus ui-icon-plus ui-btn-icon-left']</td>
       <td></td>
     </tr>
     <tr>
@@ -1046,12 +1093,12 @@
     </tr>
     <tr>
       <td>waitForElementPresent</td>
-      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_configure_editor.html\')]//div[@class=\'column_item_container ui-controlgroup ui-corner_all\']/div[%i]//select' % (configure_section_configuration['index'] + 1)"></td>
+      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_configure_editor.html\')]//div[@class=\'column_item_container\']/div[%i]//select' % (configure_section_configuration['index'] + 1)"></td>
       <td></td>
     </tr>
     <tr>
       <td>select</td>
-      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_configure_editor.html\')]//div[@class=\'column_item_container ui-controlgroup ui-corner_all\']/div[%i]//select' % (configure_section_configuration['index'] + 1)"></td>
+      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_configure_editor.html\')]//div[@class=\'column_item_container\']/div[%i]//select' % (configure_section_configuration['index'] + 1)"></td>
       <td tal:content="python: 'value=%s' % configure_section_configuration['key']"></td>
     </tr>
     <tr>
@@ -1065,7 +1112,7 @@
     </tr>
     <tr>
       <td>verifyValue</td>
-      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_configure_editor.html\')]//div[@class=\'column_item_container ui-controlgroup ui-corner_all\']/div[%i]//select' % (configure_section_configuration['index'] + 1)"></td>
+      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_configure_editor.html\')]//div[@class=\'column_item_container\']/div[%i]//select' % (configure_section_configuration['index'] + 1)"></td>
       <td tal:content="python: configure_section_configuration['key']"></td>
     </tr>
     <tr>
@@ -1111,21 +1158,46 @@
     <tr>
       <td colspan="3"><b>Verify CKEditor Text Content</b></td>
     </tr>
-    <!-- Wait for ckeditor to be loaded :/ How to inspect inside another iframe? -->
+    <!-- Wait for ckeditor to be loaded -->
     <tr>
-      <td>pause</td>
-      <td>2000</td>
+      <td>waitForElementPresent</td>
+      <td>//div[@data-gadget-scope="editor"]//iframe</td>
+      <td></td>
+    </tr>
+    <tr><!-- gadget iframe -->
+      <td>selectFrame</td>
+      <td>//div[@data-gadget-scope="editor"]//iframe</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>waitForElementPresent</td>
+      <td>//iframe</td>
+      <td></td>
+    </tr>
+    <tr><!-- CKEditor iframe -->
+      <td>selectFrame</td>
+      <td>//iframe</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>waitForElementPresent</td>
+      <td>//body</td>
       <td></td>
     </tr>
     <tr>
       <td>storeEval</td>
-      <td>document.querySelector('#selenium_myiframe').contentWindow.document.querySelector('iframe').contentWindow.document.querySelector('iframe').contentWindow.document.body.innerHTML</td>
+      <td>selenium.browserbot.getCurrentWindow().document.body.innerHTML</td>
       <td>_macro_verify_ckeditor_text_content_temporary_var</td>
     </tr>
     <tr>
       <td>verifyEval</td>
       <td>storedVars['_macro_verify_ckeditor_text_content_temporary_var']</td>
       <td tal:content="python: text_content"></td>
+    </tr>
+    <tr>
+      <td>selectFrame</td>
+      <td>relative=top</td>
+      <td></td>
     </tr>
     <tr>
       <td colspan="3"><p></p></td>
@@ -1140,17 +1212,248 @@
     <tr>
       <td colspan="3"><b>Type CKEditor Text Content</b></td>
     </tr>
-    <!-- Wait for ckeditor to be loaded :/ How to inspect inside another iframe? -->
+    <!-- Wait for ckeditor to be loaded -->
     <tr>
-      <td>pause</td>
-      <td>20000</td>
+      <td>waitForElementPresent</td>
+      <td>//div[@data-gadget-scope="editor"]//iframe</td>
+      <td></td>
+    </tr>
+    <tr><!-- gadget iframe -->
+      <td>selectFrame</td>
+      <td>//div[@data-gadget-scope="editor"]//iframe</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>waitForElementPresent</td>
+      <td>//iframe</td>
+      <td></td>
+    </tr>
+    <tr><!-- CKEditor iframe -->
+      <td>selectFrame</td>
+      <td>//iframe</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>waitForElementPresent</td>
+      <td>//body</td>
       <td></td>
     </tr>
     <tr>
       <td>storeEval</td>
-      <td tal:content="python: 'document.querySelector(\'#selenium_myiframe\').contentWindow.document.querySelector(\'iframe\').contentWindow.document.querySelector(\'iframe\').contentWindow.document.body.innerHTML = \'{}\''.format(text_content.replace('\n', '\\n').replace('\'', '\\\''))"></td>
+      <td tal:content="python: 'selenium.browserbot.getCurrentWindow().document.body.innerHTML = \'{}\''.format(text_content.replace('\n', '\\n').replace('\'', '\\\''))"></td>
       <td>_macro_type_ckeditor_text_content_temporary_var</td>
     </tr>
+    <tr>
+      <td>selectFrame</td>
+      <td>relative=top</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td colspan="3"><p></p></td>
+    </tr>
+  </tal:block>
+
+  <tal:block metal:define-macro="triggle_select">
+    <tr>
+      <td colspan="3"><b>Switch to select mode</b></td>
+    </tr>
+    <tr>
+      <td>waitForElementPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@data-i18n='Select']</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>assertElementPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@data-i18n='Select']</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>waitForElementNotPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@data-i18n='Select' and @disabled]</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>click</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@data-i18n='Select']</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>waitForElementNotPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@data-i18n='Select']</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>assertElementNotPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@data-i18n='Select']</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td colspan="3"><p></p></td>
+    </tr>
+  </tal:block>
+
+  <tal:block metal:define-macro="check_listbox_cell_text">
+    <tr>
+      <td colspan="3"><b tal:content="python: 'Check the listbox cell %(line)i %(index)i' % cell_configuration"></b></td>
+    </tr>
+    <tr>
+      <td>verifyText</td>
+      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_field_listbox.html\')]//tbody/tr[%i]/td[%i]' % (cell_configuration['line'] + 1, cell_configuration['index'] + 1)"></td>
+      <td tal:content="python: cell_configuration['text']"></td>
+    </tr>
+    <tr>
+      <td colspan="3"><p></p></td>
+    </tr>
+  </tal:block>
+
+  <tal:block metal:define-macro="check_listbox_line_selection">
+    <tr>
+      <td colspan="3"><b tal:content="python: 'Check the listbox line selection %(line)i' % line_configuration"></b></td>
+    </tr>
+    <tr>
+      <td>verifyValue</td>
+      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_field_listbox.html\')]//tbody/tr[%i]/td/input[@type=\'checkbox\'][@class=\'hide_element\']' % (line_configuration['line'] + 1)"></td>
+      <td tal:content="python: line_configuration['value']"></td>
+    </tr>
+    <tr>
+      <td colspan="3"><p></p></td>
+    </tr>
+  </tal:block>
+
+  <tal:block metal:define-macro="select_listbox_line">
+    <tr>
+      <td colspan="3"><b tal:content="python: 'Select the listbox line %(line)i' % line_configuration"></b></td>
+    </tr>
+    <tal:block tal:define="line_configuration python: {'value': 'off', 'line': line_configuration['line']}">
+      <tal:block metal:use-macro="here/Zuite_CommonTemplateForRenderjsUi/macros/check_listbox_line_selection" />
+    </tal:block>
+    <tr>
+      <td>click</td>
+      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_field_listbox.html\')]//tbody/tr[%i]/td/label' % (line_configuration['line'] + 1)"></td>
+      <td></td>
+    </tr>
+    <tal:block tal:define="line_configuration python: {'value': 'on', 'line': line_configuration['line']}">
+      <tal:block metal:use-macro="here/Zuite_CommonTemplateForRenderjsUi/macros/check_listbox_line_selection" />
+    </tal:block>
+    <tr>
+      <td colspan="3"><p></p></td>
+    </tr>
+  </tal:block>
+
+  <tal:block metal:define-macro="include_selected_line">
+    <tr>
+      <td colspan="3"><b>Include selected lines</b></td>
+    </tr>
+    <tr>
+      <td>waitForElementPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@name='IncludeRows']</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>assertElementPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@name='IncludeRows']</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>click</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@name='IncludeRows']</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>waitForElementNotPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@name='IncludeRows']</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td colspan="3"><p></p></td>
+    </tr>
+  </tal:block>
+
+  <tal:block metal:define-macro="exclude_selected_line">
+    <tr>
+      <td colspan="3"><b>Exclude selected lines</b></td>
+    </tr>
+    <tr>
+      <td>waitForElementPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@name='ExcludeRows']</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>assertElementPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@name='ExcludeRows']</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>click</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@name='ExcludeRows']</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>waitForElementNotPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@name='ExcludeRows']</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td colspan="3"><p></p></td>
+    </tr>
+  </tal:block>
+
+  <tal:block metal:define-macro="assert_listbox_not_selectable">
+    <tr>
+      <td colspan="3"><b tal:content="python: 'Check the listbox is not in select mode'"></b></td>
+    </tr>
+    <tr>
+      <td>assertElementNotPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@name='IncludeRows']</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>assertElementNotPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@name='ExcludeRows']</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>assertElementPresent</td>
+      <td>//div[contains(@data-gadget-url, 'gadget_erp5_field_listbox.html')]//button[@data-i18n='Select']</td>
+      <td></td>
+    </tr>
+
+    <tr>
+      <td>assertElementNotPresent</td>
+      <td tal:content="python: '//div[contains(@data-gadget-url, \'gadget_erp5_field_listbox.html\')]//tbody/tr/td/input[@type=\'checkbox\'][@class=\'hide_element\']'"></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td colspan="3"><p></p></td>
+    </tr>
+  </tal:block>
+
+  <tal:block metal:define-macro="go_to_selected_exchange_dialog">
+    <tr>
+      <td colspan="3"><b tal:content="python: 'Go to the exchange dialog: %(action_title)s' % exchange_configuration"></b></td>
+    </tr>
+    <tr>
+      <td>assertElementPresent</td>
+      <td>//div[contains(@class, 'ui-header')]//a[@data-i18n='Export']</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>click</td>
+      <td>//div[contains(@class, 'ui-header')]//a[@data-i18n='Export']</td>
+      <td></td>
+    </tr>
+    <tal:block metal:use-macro="here/Zuite_CommonTemplateForRenderjsUi/macros/wait_for_content_loaded" />
+    <tr>
+      <td>assertElementPresent</td>
+      <td tal:content="python: '//ul[@class=\'document-listview\']//a[@data-i18n=\'%(action_title)s\']' % exchange_configuration"></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>click</td>
+      <td tal:content="python: '//ul[@class=\'document-listview\']//a[@data-i18n=\'%(action_title)s\']' % exchange_configuration"></td>
+      <td></td>
+    </tr>
+    <tal:block metal:use-macro="here/Zuite_CommonTemplateForRenderjsUi/macros/wait_for_content_loaded" />
     <tr>
       <td colspan="3"><p></p></td>
     </tr>

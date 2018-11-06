@@ -269,12 +269,14 @@ shared = true
 extends = %(temp_dir)s/testnode/foo/rep0/software.cfg
 
 [rep1]
+repository = %(temp_dir)s/rep1
 revision = %(revision1)s
 ignore-ssl-certificate = true
 develop = false
 shared = true
 
 [rep2]
+repository = %(temp_dir)s/rep2
 revision = %(revision2)s
 ignore-ssl-certificate = true
 develop = false
@@ -486,6 +488,36 @@ shared = true
                       set(os.listdir(self.working_directory)))
     test_node.purgeOldTestSuite(test_suite_data)
     self.assertEquals(['foo'], os.listdir(self.working_directory))
+
+  def test_purgeOldTestSuiteChmodNonWriteable(self):
+    """Old test suites can be deleted even when some files/directories have
+    been chmod'd to make non-writeable  """
+    test_node = self.getTestNode()
+    test_suite_data = self.getTestSuiteData(add_third_repository=True)
+    os.mkdir(os.path.join(self.working_directory, 'bar'))
+    non_writable_file = open(os.path.join(self.working_directory, 'bar', 'non-writable-file'), 'w')
+    non_writable_file.close()
+
+    os.chmod(os.path.join(self.working_directory, 'bar', 'non-writable-file'), 0o400) # -r--------
+    os.chmod(os.path.join(self.working_directory, 'bar'), 0o500) # dr-x------
+
+    test_node.purgeOldTestSuite(test_suite_data) # should not fail
+    self.assertEqual([], os.listdir(self.working_directory))
+
+  def test_purgeOldTestSuiteChmodNonWriteableNonReadable(self):
+    """Old test suites can be deleted even when some files/directories have
+    been chmod'd to make them non readable and non writeable. """
+    test_node = self.getTestNode()
+    test_suite_data = self.getTestSuiteData(add_third_repository=True)
+    os.mkdir(os.path.join(self.working_directory, 'bar'))
+    non_writable_file = open(os.path.join(self.working_directory, 'bar', 'non-writable-file'), 'w')
+    non_writable_file.close()
+
+    os.chmod(os.path.join(self.working_directory, 'bar', 'non-writable-file'), 0o000) # ----------
+    os.chmod(os.path.join(self.working_directory, 'bar'), 0o000) # d---------
+
+    test_node.purgeOldTestSuite(test_suite_data) # should not fail
+    self.assertEqual([], os.listdir(self.working_directory))
 
   def test_09_runTestSuite(self, my_test_type='UnitTest'):
     """
@@ -911,16 +943,24 @@ shared = true
            "%r not contained by %r" % (file_list, directory_dir))
     check([])
     os.mkdir(os.path.join(temp_directory, 'buildoutA'))
-    os.mkdir(os.path.join(temp_directory, 'something'))
+    os.mkdir(os.path.join(temp_directory, 'something')) # this will be kept, as it's not a buildout tempfile
     os.mkdir(os.path.join(temp_directory, 'tmpC'))
-    check(set(['buildoutA', 'something', 'tmpC']))
+    os.mkdir(os.path.join(temp_directory, 'tmp-cannot-delete'), 0o000)
+
+    check(set(['buildoutA', 'something', 'tmpC', 'tmp-cannot-delete']))
     # default log file time is 15 days, so nothing is going to be deleted
     test_node._cleanupTemporaryFiles()
-    check(set(['buildoutA', 'something', 'tmpC']))
+    check(set(['buildoutA', 'something', 'tmpC', 'tmp-cannot-delete']))
     # then we set keep time to 0, folder will be deleted
     test_node.max_temp_time = 0
     test_node._cleanupTemporaryFiles()
+    # "something" is kept, as it is not a buildout related tmpfile
     check(set(['something']))
+    # other buildout related files are all deleted now.
+    self.assertEqual(
+        set([]) ,
+        set(['buildoutA', 'tmpC', 'tmp-cannot-delete']).intersection(
+            set(os.listdir(temp_directory))))
 
   def test_18_resetSoftwareAfterManyBuildFailures(self, my_test_type='UnitTest'):
     """
@@ -1032,8 +1072,6 @@ shared = true
       return {'status_code':0}
     def patch_generateProfilePasswordAccess(self, *args, **kw):
       return "user", "pass"
-    def patch_prepareFrontendMasterInstance(self, *args, **kw):
-      return "dummy_instance_guid"
     def patch_getDictionaryFromFile(self, *args, **kw):
       return []
     test_self = self
@@ -1061,7 +1099,6 @@ shared = true
     original_updateInstanceXML = SlapOSControler.updateInstanceXML
     original_SlapOSMasterCommunicator__init__ = SlapOSMasterCommunicator.__init__
     original_generateProfilePasswordAccess = RunnerClass.generateProfilePasswordAccess
-    original_prepareFrontendMasterInstance = RunnerClass.prepareFrontendMasterInstance
     original_getDictionaryFromFile = RunnerClass.getDictionaryFromFile
     original_updateDictionaryFile = RunnerClass.updateDictionaryFile
     original__createInstance = RunnerClass._createInstance
@@ -1085,7 +1122,6 @@ shared = true
     SlapOSControler.updateInstanceXML = doNothing
     SlapOSMasterCommunicator.__init__ = doNothing
     RunnerClass.generateProfilePasswordAccess = patch_generateProfilePasswordAccess
-    RunnerClass.prepareFrontendMasterInstance = patch_prepareFrontendMasterInstance
     RunnerClass.updateDictionaryFile = doNothing
     RunnerClass.getDictionaryFromFile = patch_getDictionaryFromFile
     RunnerClass._createInstance = doNothing
@@ -1112,7 +1148,6 @@ shared = true
     SlapOSMasterCommunicator.__init__ = original_SlapOSMasterCommunicator__init__
     time.sleep =original_sleep
     RunnerClass.generateProfilePasswordAccess = original_generateProfilePasswordAccess
-    RunnerClass.prepareFrontendMasterInstance = original_prepareFrontendMasterInstance
     RunnerClass.getDictionaryFromFile = original_getDictionaryFromFile
     RunnerClass.updateDictionaryFile = original_updateDictionaryFile
     RunnerClass._createInstance = original__createInstance

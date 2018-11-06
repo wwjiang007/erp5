@@ -100,7 +100,7 @@
         <item>
             <key> <string>text_content</string> </key>
             <value> <string>CACHE MANIFEST\n
-# generated on Thu, 28 Jun 2018 15:31:33 +0000\n
+# generated on Thu, 14 Aug 2018 15:31:33 +0000\n
 CACHE:\n
 favicon.ico\n
 font-awesome/font-awesome-webfont.eot\n
@@ -169,6 +169,8 @@ gadget_interface_validator_jio.html\n
 gadget_interface_validator_jio.js\n
 gadget_interface.html\n
 gadget_interface.js\n
+gadget_interface_loader.html\n
+gadget_interface_loader.js\n
 NETWORK:\n
 *</string> </value>
         </item>
@@ -305,7 +307,7 @@ NETWORK:\n
             </item>
             <item>
                 <key> <string>serial</string> </key>
-                <value> <string>968.34429.27639.36556</string> </value>
+                <value> <string>970.14054.33498.24268</string> </value>
             </item>
             <item>
                 <key> <string>state</string> </key>
@@ -323,7 +325,7 @@ NETWORK:\n
                     </tuple>
                     <state>
                       <tuple>
-                        <float>1530201523.97</float>
+                        <float>1536845892.77</float>
                         <string>UTC</string>
                       </tuple>
                     </state>

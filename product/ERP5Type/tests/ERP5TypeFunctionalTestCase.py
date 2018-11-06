@@ -46,6 +46,40 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+# selenium workaround for localhost / 127.0.0.1 resolution
+# ------
+# Selenium connects starts a service on localhost, but when ERP5
+# is running under userhosts wrapper, because we don't have entry for
+# localhost in our pseudo /etc/hosts file, localhost resolution is delegated
+# to local DNS, which might not resolve localhost - for example 8.8.8.8
+# does not.
+# We work around this by monkey-patching the places in selenium where
+# localhost resolution is required and returning 127.0.0.1 directly.
+# This is not really correct, it would be better to use SlapOS partition IP,
+# but we need a quick fix to have test results again.
+
+# Service.start polls utils.is_connectable(port) - without host argument, assuming the default
+# localhost.
+# https://github.com/SeleniumHQ/selenium/blob/selenium-3.14.0/py/selenium/webdriver/common/service.py#L99
+import selenium.webdriver.common.utils
+original_is_connectable = selenium.webdriver.common.utils.is_connectable
+def is_connectable(port, host="localhost"):
+  if host == "localhost":
+    host = "127.0.0.1"
+  return original_is_connectable(port, host)
+selenium.webdriver.common.utils.is_connectable = is_connectable
+
+# Service.get_service_url hardcodes 127.0.0.1
+# https://github.com/SeleniumHQ/selenium/blob/selenium-3.14.0/py/selenium/webdriver/common/service.py#L56
+original_join_host_port  = selenium.webdriver.common.utils.join_host_port
+def join_host_port(host, port):
+  if host == "localhost":
+    host = "127.0.0.1"
+  return original_join_host_port(host, port)
+selenium.webdriver.common.utils.join_host_port = join_host_port
+# /selenium workaround
+
+
 ZELENIUM_BASE_URL = "%s/portal_tests/%s/core/TestRunner.html?test=../test_suite_html&auto=on&resultsUrl=../postResults&__ac_name=%s&__ac_password=%s"
 
 tests_framework_home = os.path.dirname(os.path.abspath(__file__))
@@ -138,19 +172,30 @@ class FunctionalTestRunner:
     return self.portal.portal_tests.TestTool_getResults(self.run_only)
 
   def _getTestURL(self):
-    return ZELENIUM_BASE_URL % (self.portal.portal_url(), self.run_only,
-                       self.user, self.password)
+    # Access the https proxy in front of runUnitTest's zserver
+    base_url = os.getenv('zserver_frontend_url')
+    if base_url:
+      base_url = '%s%s' % (base_url, self.portal.getId())
+    else:
+      base_url = self.portal.portal_url()
+    return ZELENIUM_BASE_URL % (
+        base_url,
+        self.run_only,
+        self.user,
+        self.password)
 
   def test(self, debug=0):
     xvfb = Xvfb(self.instance_home)
     try:
-      if not debug:
+      if not (debug and os.getenv('DISPLAY')):
         print("\nSet 'erp5_debug_mode' environment variable to 1"
               " to use your existing display instead of Xvfb.")
         xvfb.run()
       capabilities = webdriver.common.desired_capabilities \
         .DesiredCapabilities.FIREFOX.copy()
       capabilities['marionette'] = True
+      # Zope is accessed through apache with a certificate not trusted by firefox
+      capabilities['acceptInsecureCerts'] = True
       # Service workers are disabled on Firefox 52 ESR:
       # https://bugzilla.mozilla.org/show_bug.cgi?id=1338144
       options = webdriver.FirefoxOptions()

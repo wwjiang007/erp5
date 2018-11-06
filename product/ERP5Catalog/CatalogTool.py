@@ -85,10 +85,10 @@ class IndexableObjectWrapper(object):
     __security_parameter_cache = None
     __local_role_cache = None
 
-    def __init__(self, ob, user_set, role_dict):
+    def __init__(self, ob, user_set, catalog_role_set):
         self.__ob = ob
         self.__user_set = user_set
-        self.__role_dict = role_dict
+        self.__catalog_role_set = catalog_role_set
 
     def __getattr__(self, name):
         return getattr(self.__ob, name)
@@ -110,7 +110,7 @@ class IndexableObjectWrapper(object):
         skip_role_set = set()
         skip_role = skip_role_set.add
         clear_skip_role = skip_role_set.clear
-        for key, role_list in mergedLocalRoles(ob).iteritems():
+        for group_id, role_list in mergedLocalRoles(ob).iteritems():
           new_role_list = []
           new_role = new_role_list.append
           clear_skip_role()
@@ -118,33 +118,38 @@ class IndexableObjectWrapper(object):
             if role[:1] == '-':
               skip_role(role[1:])
             elif role not in skip_role_set:
+              if role == 'Owner':
+                # Owner role may only be granted to users, not to groups so we
+                # can immediately know this security group id is a user.
+                self.__user_set.add(group_id)
               new_role(role)
           if new_role_list:
-            local_role_dict[key] = [new_role_list, False]
+            local_role_dict[group_id] = new_role_list
         self.__local_role_cache = local_role_dict
       return local_role_dict
 
-    def _getSecurityGroupIdList(self):
+    def _getSecurityGroupIdGenerator(self):
       """
       Return the list of security group identifiers this document is
-      interested in. They may be actual user identifiers or not.
+      interested to know whether they are users or groups: this only matters
+      for security group ids which are granted at least one role mapping to a
+      role column.
+      They may be user identifiers or group identifiers.
       Supposed to be accessed by CatalogTool.
       """
-      return self.__getLocalRoleDict().keys()
+      no_indexable_role = self.__catalog_role_set.isdisjoint
+      return (
+        group_id
+        for group_id, role_list in self.__getLocalRoleDict().iteritems()
+        if group_id not in self.__user_set and
+          # group_id is returned only if any of its roles is indexable
+          not no_indexable_role(role_list)
+      )
 
     def _getSecurityParameterList(self):
       result = self.__security_parameter_cache
       if result is None:
         ob = self.__ob
-        local_role_dict = self.__getLocalRoleDict()
-
-        role_dict = self.__role_dict
-        user_set = self.__user_set
-        for security_group_id, security_group_data in local_role_dict.iteritems():
-          security_group_data[1] = security_group_id in user_set
-
-        allowed_dict = {}
-
         # For each local role of a user:
         #   If the local role grants View permission, add it.
         # Every addition implies 2 lines:
@@ -163,68 +168,80 @@ class IndexableObjectWrapper(object):
         allowed_role_set.discard('Owner')
 
         # XXX make this a method of base ?
-        local_roles_group_id_dict = deepcopy(getattr(ob,
-          '__ac_local_roles_group_id_dict__', {}))
-
+        local_roles_group_id_dict = deepcopy(getattr(
+          ob,
+          '__ac_local_roles_group_id_dict__',
+          {},
+        ))
         # If we acquire a permission, then we also want to acquire the local
         # roles group ids
         local_roles_container = ob
         while getattr(local_roles_container, 'isRADContent', 0):
           if local_roles_container._getAcquireLocalRoles():
             local_roles_container = local_roles_container.aq_parent
-            for role_definition_group, user_and_role_list in \
-                getattr(local_roles_container,
-                        '__ac_local_roles_group_id_dict__',
-                        {}).items():
-              local_roles_group_id_dict.setdefault(role_definition_group, set()
-                ).update(user_and_role_list)
+            for role_definition_group, user_and_role_list in getattr(
+              local_roles_container,
+              '__ac_local_roles_group_id_dict__',
+              {},
+            ).iteritems():
+              local_roles_group_id_dict.setdefault(
+                role_definition_group,
+                set(),
+              ).update(user_and_role_list)
           else:
             break
 
-        allowed_by_local_roles_group_id = {}
-        allowed_by_local_roles_group_id[''] = allowed_role_set
-
+        allowed_by_local_roles_group_id = {
+          '': allowed_role_set,
+        }
         optimized_role_set = set()
         for role_definition_group, user_and_role_list in local_roles_group_id_dict.iteritems():
           group_allowed_set = allowed_by_local_roles_group_id.setdefault(
-            role_definition_group, set())
+            role_definition_group,
+            set(),
+          )
           for user, role in user_and_role_list:
             if role in allowed_role_set:
               prefix = 'user:' + user
-              group_allowed_set.update((prefix, '%s:%s' % (prefix, role)))
+              group_allowed_set.add(prefix)
+              group_allowed_set.add(prefix + ':' + role)
               optimized_role_set.add((user, role))
         user_role_dict = {}
         user_view_permission_role_dict = {}
-        for user, (roles, user_exists) in local_role_dict.iteritems():
-          prefix = 'user:' + user
-          for role in roles:
-            is_not_in_optimised_role_set = (user, role) not in optimized_role_set
-            if user_exists and role in role_dict:
-              # User is a user (= not a group) and role is configured as
+        catalog_role_set = self.__catalog_role_set
+        user_set = self.__user_set
+        for group_id, role_list in self.__getLocalRoleDict().iteritems():
+          # Warning: only valid when group_id is candidate for indexation in a
+          # catalog_role column !
+          group_id_is_user = group_id in user_set
+          prefix = 'user:' + group_id
+          for role in role_list:
+            is_not_in_optimised_role_set = (group_id, role) not in optimized_role_set
+            if group_id_is_user and role in catalog_role_set:
+              # group_id is a user (= not a group) and role is configured as
               # monovalued.
               if is_not_in_optimised_role_set:
-                user_role_dict[role] = user
+                user_role_dict[role] = group_id
               if role in allowed_role_set:
                 # ...and local role grants view permission.
-                user_view_permission_role_dict[role] = user
+                user_view_permission_role_dict[role] = group_id
             elif role in allowed_role_set:
               # User is a group and local role grants view permission.
-              for group in local_roles_group_id_dict.get(user, ('', )):
+              for role_definition_group in local_roles_group_id_dict.get(group_id, ('', )):
                 group_allowed_set = allowed_by_local_roles_group_id.setdefault(
-                  group, set())
+                  role_definition_group,
+                  set(),
+                )
                 if is_not_in_optimised_role_set:
                   group_allowed_set.add(prefix)
-                  group_allowed_set.add('%s:%s' % (prefix, role))
+                  group_allowed_set.add(prefix + ':' + role)
 
-        # sort `allowed` principals
-        sorted_allowed_by_local_roles_group_id = {}
-        for local_roles_group_id, allowed in \
-                allowed_by_local_roles_group_id.iteritems():
-          sorted_allowed_by_local_roles_group_id[local_roles_group_id] = tuple(
-            sorted(allowed))
+        # sort and freeze `allowed` principals
+        for local_roles_group_id, allowed in allowed_by_local_roles_group_id.iteritems():
+          allowed_by_local_roles_group_id[local_roles_group_id] = tuple(sorted(allowed))
 
         self.__security_parameter_cache = result = (
-          sorted_allowed_by_local_roles_group_id,
+          allowed_by_local_roles_group_id,
           user_role_dict,
           user_view_permission_role_dict,
         )
@@ -579,14 +596,13 @@ class CatalogTool (UniqueObject, ZCatalog, CMFCoreCatalogTool, ActiveObject):
       role_column_dict = {}
       local_role_column_dict = {}
       catalog = self.getSQLCatalog(sql_catalog_id)
-      column_map = catalog.getColumnMap()
 
       # We only consider here the Owner role (since it was not indexed)
       # since some objects may only be visible by their owner
       # which was not indexed
-      for role, column_id in catalog.getSQLCatalogRoleKeysList():
-        # XXX This should be a list
-        if not user_is_superuser:
+      if not user_is_superuser:
+        for role, column_id in catalog.getSQLCatalogRoleKeysList():
+          # XXX This should be a list
           try:
             # if called by an executable with proxy roles, we don't use
             # owner, but only roles from the proxy.
@@ -633,7 +649,7 @@ class CatalogTool (UniqueObject, ZCatalog, CMFCoreCatalogTool, ActiveObject):
                 column_id = role_dict[role]
                 new_role_column_dict[column_id] = user_str
             new_allowedRolesAndUsers.append('%s:%s' % (user_or_group, role))
-        if local_role_column_dict == {}:
+        if not local_role_column_dict:
           allowedRolesAndUsers = new_allowedRolesAndUsers
           role_column_dict = new_role_column_dict
 
@@ -845,17 +861,17 @@ class CatalogTool (UniqueObject, ZCatalog, CMFCoreCatalogTool, ActiveObject):
       portal = self.getPortalObject()
 
       user_set = set()
-      role_dict = dict(catalog_value.getSQLCatalogRoleKeysList())
+      catalog_role_set = {x for x, _ in catalog_value.getSQLCatalogRoleKeysList()}
       catalog_security_uid_groups_columns_dict = catalog_value.getSQLCatalogSecurityUidGroupsColumnsDict()
       default_security_uid_column = catalog_security_uid_groups_columns_dict['']
       getPredicatePropertyDict = catalog_value.getPredicatePropertyDict
-      security_group_set = set()
+      group_and_user_id_set = set()
       wrapper_list = []
       for object_value in object_value_list:
         document_object = aq_inner(object_value)
-        w = IndexableObjectWrapper(document_object, user_set, role_dict)
+        w = IndexableObjectWrapper(document_object, user_set, catalog_role_set)
         w.predicate_property_dict = getPredicatePropertyDict(object_value) or {}
-        security_group_set.update(w._getSecurityGroupIdList())
+        group_and_user_id_set.update(w._getSecurityGroupIdGenerator())
 
         # Find the parent definition for security
         is_acquired = 0
@@ -870,21 +886,20 @@ class CatalogTool (UniqueObject, ZCatalog, CMFCoreCatalogTool, ActiveObject):
           else:
             break
         if is_acquired:
-          document_w = IndexableObjectWrapper(document_object, user_set, role_dict)
-          security_group_set.update(document_w._getSecurityGroupIdList())
+          document_w = IndexableObjectWrapper(document_object, user_set, catalog_role_set)
+          group_and_user_id_set.update(document_w._getSecurityGroupIdGenerator())
         else:
           document_w = w
         wrapper_list.append((document_object, w, document_w))
 
-      # Note: we mutate the set, so all related wrappers get (purposedly)
-      # affected by this, which must happen before _getSecurityParameterList
-      # is called (which happens when calling getSecurityUidDict below).
-      user_set.update(
-        x['id'] for x in portal.acl_users.searchUsers(
-          id=list(security_group_set),
-          exact_match=True,
-        )
-      )
+      group_and_user_id_set -= user_set
+      if group_and_user_id_set:
+        # Note: we mutate the set, so all related wrappers get (purposedly)
+        # affected by this, which must happen before _getSecurityParameterList
+        # is called (which happens when calling getSecurityUidDict below).
+        user_set.update(portal.ERP5Site_filterUserIdSet(
+          group_and_user_id_set=group_and_user_id_set,
+        ))
 
       getSecurityUidDict = catalog_value.getSecurityUidDict
       getSubjectSetUid = catalog_value.getSubjectSetUid

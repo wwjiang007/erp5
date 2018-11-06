@@ -14,6 +14,8 @@ MAIN FILE: generate report (book header/footer and report content)
 # document_language:        use as document version
 # document_reference:       use as document reference
 # document_title            use as document title
+
+# override_source_organisation organisation for report header/footer
 # override_batch_mode       used for tests
 # ------
 # document_download:        download file directly (default None)
@@ -27,6 +29,9 @@ MAIN FILE: generate report (book header/footer and report content)
 # display_milestone         show associated milestones
 # display_orphan            show requirements not covered by task/item
 # --------
+# start_date                the start date of the report
+# stop_date                 the stop date of the report
+# --------
 # report_name               report to generate
 # report_title              report title
 
@@ -34,12 +39,15 @@ from Products.PythonScripts.standard import html_quote
 from base64 import b64encode
 
 blank = ''
+pref = context.getPortalObject().portal_preferences
+
 # ------------------ HTML cleanup/converter methods ----------------------------
 def translateText(snip):
   return doc_localiser.erp5_ui.gettext(snip, lang=doc_language).encode('utf-8').strip()
 
 # -------------------------- Setup ---------------------------------------------
 doc = context
+doc_prefix = pref.getPreferredCorporateIdentityTemplateReportDocumentPrefix() or "Report."
 doc_download = None #XXX not yet implemented
 doc_save = int(kw.get('document_save') or 0)
 doc_display_header = int(kw.get('display_header') or 0)
@@ -55,7 +63,18 @@ override_document_title = kw.get('document_title')
 override_document_version = kw.get('document_version')
 override_document_reference = kw.get('document_reference')
 override_document_language = kw.get('document_language')
+override_source_organisation_title=kw.get('override_source_organisation', None)
 override_batch_mode = kw.get('batch_mode')
+
+# we are just caller, so if no dates are passed, the report must decide what to set
+doc_report_start_date_input = kw.get('start_date', None) or getattr(context.REQUEST.form, 'start_date', None)
+doc_report_start_date = None
+if doc_report_start_date_input:
+  doc_report_start_date = DateTime(doc_report_start_date_input)
+doc_report_stop_date_input = kw.get('stop_date', None) or getattr(context.REQUEST.form, 'stop_date', None)
+doc_report_stop_date = None
+if doc_report_stop_date_input:
+  doc_report_stop_date = DateTime(doc_report_stop_date_input)
 
 doc_report_name = kw.get('report_name')
 doc_report_title = kw.get('report_title')
@@ -64,21 +83,19 @@ doc_embed = doc_format == 'html' and (doc_display_embedded or doc_display_sandbo
 
 # -------------------------- Document Parameters  ------------------------------
 doc_localiser = doc.getPortalObject().Localizer
-doc_rendering_fix = doc.Base_getTemplateParameter('wkhtmltopdf_rendering_fix') or blank
+doc_rendering_fix = doc.WebPage_getPdfOutputRenderingFix() or blank
 doc_report = getattr(doc, doc_report_name)
 doc_aggregate_list = []
 doc_revision = "1"
 doc_modification_date = DateTime()
 doc_language = doc.getLanguage() if getattr(doc, 'getLanguage', None) else None
-
-doc_reference = html_quote(override_document_reference) if override_document_reference else doc.getReference() or blank
-doc_short_title = html_quote(doc_report_title) if doc_report_title else doc.getShortTitle() or blank
-doc_version = html_quote(override_document_version) if override_document_version else getattr(doc, "version", None) or "001"
-doc_title = html_quote(override_document_title) if override_document_title else doc.getTitle() or blank
-doc_language = html_quote(override_document_language) if override_document_language else doc_language
 doc_translated_title = translateText(doc_report_title) if doc_report_title else blank
 
-doc_content = doc_report(
+# fallback in case language is still None
+if doc_language is None or doc_language == "":
+  doc_language = doc_localiser.get_selected_language() or doc_localiser.get_default_language() or "en"
+
+doc_content, report_override_doc_title, report_override_doc_subtitle = doc_report(
   display_report=None if doc_embed else True,
   format=doc_format,
   display_depth=doc_display_depth,
@@ -89,8 +106,23 @@ doc_content = doc_report(
   display_embedded=doc_display_embedded,
   display_milestone=doc_display_milestone,
   display_orphan=doc_display_orphan,
-  report_title=doc_translated_title
+  start_date=doc_report_start_date,
+  stop_date=doc_report_stop_date,
+  report_title=doc_translated_title,
+  override_batch_mode=override_batch_mode
 )
+if doc.isModuleType():
+  doc_reference = html_quote(override_document_reference) if override_document_reference else blank
+  doc_short_title = translateText(report_override_doc_subtitle if report_override_doc_subtitle else html_quote(doc_report_title) if doc_report_title else blank)
+  doc_version = html_quote(override_document_version) if override_document_version else getattr(doc, "version", None) or "001"
+  doc_title = translateText(html_quote(override_document_title) if override_document_title else report_override_doc_title if report_override_doc_title else blank)
+  doc_language = html_quote(override_document_language) if override_document_language else doc_language
+else:
+  doc_reference = html_quote(override_document_reference) if override_document_reference else doc.getReference() or blank
+  doc_short_title = translateText(report_override_doc_subtitle if report_override_doc_subtitle else html_quote(doc_report_title) if doc_report_title else doc.getShortTitle() or blank)
+  doc_version = html_quote(override_document_version) if override_document_version else getattr(doc, "version", None) or "001"
+  doc_title = translateText(html_quote(override_document_title) if override_document_title else report_override_doc_title if report_override_doc_title else doc.getTitle() or blank)
+  doc_language = html_quote(override_document_language) if override_document_language else doc_language
 
 # test overrides
 if override_batch_mode:
@@ -101,17 +133,17 @@ if doc_language is not None:
 if doc_language is None:
   doc_language = blank
 if doc_reference == blank:
-  doc_reference = "Report." + doc_title.replace(" ", ".")
+  doc_reference = doc_prefix + doc_title.replace(" ", ".")
 doc_full_reference = '-'.join([doc_reference, doc_version, doc_language])
 doc_short_date = doc_modification_date.strftime('%Y-%m-%d')
 
 # ------------------------------- Theme ----------------------------------------
-doc_theme = doc.Base_getThemeDict(doc_format=doc_format, css_path="template_css/book")
+doc_theme = doc.Base_getThemeDict(doc_format=doc_format, css_path="template_css/book", skin="Book")
 
 # --------------------------- Source/Destination -------------------------------
 doc_source = doc.Base_getSourceDict(
   override_source_person_title=None,
-  override_source_organisation_title=None,
+  override_source_organisation_title=override_source_organisation_title,
   theme_logo_url=doc_theme.get("theme_logo_url", None)
 )
 
@@ -131,8 +163,8 @@ if doc_format == "html":
     book_template_css_url=doc_theme.get("template_css_url"),
     book_logo_url=doc.Base_setUrl(path=doc_source.get("enhanced_logo_url"), display=None),
     book_logo_title=doc_source.get("theme_logo_description"),
-    book_report_css_list=doc.Base_getTemplateParameter("report_css_list") or [],
-    book_report_js_list=doc.Base_getTemplateParameter("report_js_list") or [],
+    book_report_css_list=pref.getPreferredCorporateIdentityTemplateReportCssList() or [],
+    book_report_js_list=pref.getPreferredCorporateIdentityTemplateReportJsList() or [],
     book_short_title=doc_short_title,
     book_reference=doc_reference,
     book_revision=doc_revision,
@@ -167,8 +199,8 @@ if doc_format == "pdf":
     book_theme_css_font_list=doc_theme.get("theme_css_font_list"),
     book_theme_css_url=doc_theme.get("theme_css_url"),
     book_template_css_url=doc_theme.get("template_css_url"),
-    book_report_css_list=doc.Base_getTemplateParameter("report_css_list") or [],
-    book_report_js_list=doc.Base_getTemplateParameter("report_js_list") or [],
+    book_report_css_list=pref.getPreferredCorporateIdentityTemplateReportCssList() or [],
+    book_report_js_list=pref.getPreferredCorporateIdentityTemplateReportJsList() or [],
     book_content=doc_content,
   )
 

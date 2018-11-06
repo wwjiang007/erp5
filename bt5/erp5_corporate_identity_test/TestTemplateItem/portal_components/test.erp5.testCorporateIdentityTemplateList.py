@@ -212,7 +212,9 @@ class TestCorporateIdentityTemplateList(ERP5TypeTestCase):
     if dump:
       expected_page.edit(text_content=html)
       self.tic()
-    self.assertEquals(html.encode('UTF-8'), expected_page.getData())
+    self.assertEqual(
+        html.encode('UTF-8'),#.splitlines(),
+        expected_page.getData())#.splitlines())
 
   def runPdfTestPattern(self, id1, id2, id3, **kw):
     """
@@ -988,6 +990,26 @@ class TestCorporateIdentityTemplateList(ERP5TypeTestCase):
     )
 
   @changeSkin('Book')
+  def test_htmlBookEdgeCases(self):
+    """
+      Test:
+      - Web Page as Book
+      - without table of content
+      - testing edge cases (long words, blockquotes...)
+      - export as html
+    """
+    self.runHtmlTestPattern(
+      "template_test_book_input_003_en_html",
+      "template_test_book_output_expected_004_en_html",
+      **dict(
+        use_skin="Book",
+        test_method="WebPage_exportAsBook",
+        include_content_table=0,
+        override_revision=1
+      )
+    )
+
+  @changeSkin('Book')
   def test_pdfBook(self):
     """
       Test:
@@ -1129,6 +1151,28 @@ class TestCorporateIdentityTemplateList(ERP5TypeTestCase):
         use_skin="Book",
         test_method="WebPage_exportAsBook",
         page_number=1,
+        format="pdf",
+        override_revision=1
+      )
+    )
+
+  @changeSkin('Book')
+  def test_pdfBookEdgeCases(self):
+    """
+      Test:
+      - Web Page as Book
+      - without table of content
+      - testing edge cases (blockquote, long lines)
+      - export as pdf
+    """
+    self.runPdfTestPattern(
+      "template_test_book_input_003_en_html",
+      "template_test_book_input_page_7_004_en_bmp",
+      "template_test_book_input_004_en_pdf",
+      **dict(
+        page_number=7,
+        use_skin="Book",
+        test_method="WebPage_exportAsBook",
         format="pdf",
         override_revision=1
       )

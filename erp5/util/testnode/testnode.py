@@ -27,7 +27,6 @@
 import os
 import json
 import time
-import shutil
 import logging
 from contextlib import contextmanager
 from slapos.slap.slap import ConnectionError
@@ -39,6 +38,7 @@ from .NodeTestSuite import NodeTestSuite, SlapOSInstance
 from .ScalabilityTestRunner import ScalabilityTestRunner
 from .UnitTestRunner import UnitTestRunner
 from .Utils import deunicodeData
+from .Utils import rmtree
 from .. import taskdistribution
 
 MAX_LOG_TIME = 15 # time in days we should keep logs that we can see through
@@ -74,7 +74,7 @@ class TestNode(object):
       self.node_test_suite_dict.pop(reference, None)
       logger.info("testnode.purgeOldTestSuite, DELETING : %r", fpath)
       if os.path.isdir(fpath):
-        shutil.rmtree(fpath)
+        rmtree(fpath)
       else:
         os.remove(fpath)
   
@@ -124,11 +124,13 @@ class TestNode(object):
         if test_type=="ScalabilityTest":
           profile_content_list.append("""
 [%(buildout_section_id)s]
+repository = %(url)s
 revision = %(revision)s
 ignore-ssl-certificate = true
 develop = false
 shared = true
-""" %     {'buildout_section_id': buildout_section_id,
+""" %     {'url': vcs_repository['url'],
+           'buildout_section_id': buildout_section_id,
           'revision': revision_dict[buildout_section_id][1]})
         else:
           profile_content_list.append("""
@@ -216,7 +218,7 @@ shared = true
       if os.path.isdir(folder_path):
         if os.stat(folder_path).st_mtime < prune_time:
           logger.debug("deleting log directory %r", folder_path)
-          shutil.rmtree(folder_path)
+          rmtree(folder_path)
 
   def _cleanupTemporaryFiles(self):
     """
@@ -235,7 +237,7 @@ shared = true
           if stat.st_uid == user_id and stat.st_mtime < prune_time:
             logger.debug("deleting temp directory %r", folder_path)
             if os.path.isdir(folder_path):
-              shutil.rmtree(folder_path)
+              rmtree(folder_path)
             else:
               os.remove(folder_path)
         except OSError:

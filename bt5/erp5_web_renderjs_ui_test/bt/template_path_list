@@ -2,6 +2,8 @@ portal_tests/renderjs_ui_check_box_field_zuite
 portal_tests/renderjs_ui_check_box_field_zuite/**
 portal_tests/renderjs_ui_date_time_field_zuite
 portal_tests/renderjs_ui_date_time_field_zuite/**
+portal_tests/renderjs_ui_dms_zuite
+portal_tests/renderjs_ui_dms_zuite/**
 portal_tests/renderjs_ui_editor_gadget_zuite
 portal_tests/renderjs_ui_editor_gadget_zuite/**
 portal_tests/renderjs_ui_float_field_zuite
@@ -10,6 +12,8 @@ portal_tests/renderjs_ui_form_box_zuite
 portal_tests/renderjs_ui_form_box_zuite/**
 portal_tests/renderjs_ui_label_field_zuite
 portal_tests/renderjs_ui_label_field_zuite/**
+portal_tests/renderjs_ui_interface_validator_zuite
+portal_tests/renderjs_ui_interface_validator_zuite/**
 portal_tests/renderjs_ui_lines_field_zuite
 portal_tests/renderjs_ui_lines_field_zuite/**
 portal_tests/renderjs_ui_list_field_zuite
@@ -44,3 +48,4 @@ portal_tests/renderjs_ui_translate_zuite
 portal_tests/renderjs_ui_translate_zuite/**
 portal_tests/renderjs_ui_zuite
 portal_tests/renderjs_ui_zuite/**
+web_page_module/gadget_erp5_page_router_test_*

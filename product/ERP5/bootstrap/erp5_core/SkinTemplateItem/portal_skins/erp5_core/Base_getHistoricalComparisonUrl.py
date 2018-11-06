@@ -11,6 +11,9 @@ request = context.REQUEST
 
 serial = getattr(brain, 'serial', '0.0.0.0')
 next_serial = getattr(brain, 'next_serial', '0.0.0.0')
+time = getattr(brain, 'time', '')
+action = getattr(brain, 'action', '')
+actor = getattr(brain, 'actor', '')
 
 # There is no need to compare revisions in case its the
 # first version.
@@ -32,12 +35,14 @@ if serial != '0.0.0.0':
               'extra_param_json': {
                 'serial': serial,
                 'next_serial': next_serial,
-                'time': brain.time
+                'time': time,
+                'action': action,
+                'actor': actor,
               }
             }
            }
-  return 'Base_viewHistoricalComparison?serial=%s&amp;next_serial=%s&amp;time=%s'\
-      % ( serial, next_serial, brain.time )
+  return 'Base_viewHistoricalComparison?serial=%s&amp;next_serial=%s&amp;time=%s&amp;action=%s&amp;actor=%s'\
+      % ( serial, next_serial, time, action, actor )
 
 elif url_dict:
   return {}

@@ -158,6 +158,8 @@ portal_actions | catalog_tool
 portal_actions | category_tool
 portal_actions | component_tool
 portal_actions | create_module
+portal_actions | diff_multiple_object_action
+portal_actions | diff_object_action
 portal_actions | history
 portal_actions | list_ui
 portal_actions | make_template
@@ -170,6 +172,7 @@ portal_actions | search
 portal_actions | sort_on
 portal_actions | types_tool
 portal_actions | view_historical_comparison
+portal_actions | view_historical_diff
 portal_membership | login
 portal_membership | logout
 portal_membership | preferences

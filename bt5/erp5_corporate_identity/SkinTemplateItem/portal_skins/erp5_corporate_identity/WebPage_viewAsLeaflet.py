@@ -27,6 +27,7 @@ from Products.PythonScripts.standard import html_quote
 from base64 import b64encode
 
 blank = ''
+pref = context.getPortalObject().portal_preferences
 
 # ------------------ HTML cleanup/converter methods ----------------------------
 def removeLegalesePlaceholders(content):
@@ -36,7 +37,7 @@ def removeLegalesePlaceholders(content):
 
 # -------------------------- Setup ---------------------------------------------
 leaflet = context
-leaflet_prefix = "Leaflet."
+leaflet_prefix = pref.getPreferredCorporateIdentityTemplateLeafletDocumentPrefix() or "Leaflet."
 leaflet_format = kw.get('format') or 'html'
 leaflet_display_svg = kw.get('display_svg') or "png"
 leaflet_download = int(kw.get('document_download') or 0)
@@ -75,7 +76,7 @@ if leaflet_reference is None:
 leaflet_full_reference = '-'.join([leaflet_reference, leaflet_version, leaflet_language])
 
 # ---------------------------- Theme Parameters --------------------------------
-leaflet_theme = leaflet.Base_getThemeDict(doc_format=leaflet_format, css_path="template_css/leaflet")
+leaflet_theme = leaflet.Base_getThemeDict(doc_format=leaflet_format, css_path="template_css/leaflet", skin="Leaflet")
 
 if override_leaflet_header_title and override_leaflet_header_title != blank:
   leaflet_theme["theme_logo_description"] = html_quote(override_leaflet_header_title)
@@ -140,7 +141,14 @@ if leaflet_display_side:
     leaflet_year=leaflet_year,
     leaflet_recycle_url=leaflet_recycle_url
   )
-  leaflet_content = leaflet_legalese.decode() + leaflet_content.decode()
+  #leaflet_content = leaflet_legalese.decode() + leaflet_content.decode()
+
+  if isinstance(leaflet_legalese, unicode):
+    leaflet_legalese = leaflet_legalese.encode("UTF-8")
+  if isinstance(leaflet_content, unicode):
+    leaflet_content = leaflet_content.encode("UTF-8")
+
+  leaflet_content = leaflet_legalese + leaflet_content
 
 # ========================= TRANSFORMATION: book ===============================
 # XXX still dirty
@@ -260,7 +268,6 @@ if leaflet_format == "pdf":
       footer_spacing=3
     )
   )
-
   return leaflet.WebPage_finishPdfCreation(
     doc_download=leaflet_download,
     doc_save=leaflet_save,

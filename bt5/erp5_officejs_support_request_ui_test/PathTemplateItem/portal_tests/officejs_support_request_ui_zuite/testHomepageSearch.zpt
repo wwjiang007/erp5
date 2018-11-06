@@ -8,7 +8,7 @@
 <thead>
 <tr><td rowspan="1" colspan="3">Support Request Zuite</td></tr>
 </thead><tbody>
-<tal:block metal:use-macro="here/Zuite_CommonTemplate/macros/init" />
+<tal:block metal:use-macro="here/Zuite_SupportRequestUITemplate/macros/init" />
 <tr>
   <td>open</td>
   <td>${base_url}/web_site_module/erp5_officejs_support_request_ui/</td>
@@ -21,12 +21,12 @@
 </tr>
 <tr>
   <td>waitForElementPresent</td>
-  <td>//button[@class="search_button ui-shadow-inset ui-btn ui-btn-inline ui-corner-all ui-btn-icon-notext ui-icon-search ui-override-theme ui-input-btn"]</td>
+  <td>//button[@class="search_button ui-btn-icon-notext ui-icon-search"]</td>
   <td></td>
 </tr>
 <tr>
   <td>click</td>
-  <td>//button[@class="search_button ui-shadow-inset ui-btn ui-btn-inline ui-corner-all ui-btn-icon-notext ui-icon-search ui-override-theme ui-input-btn"]</td>
+  <td>//button[@class="search_button ui-btn-icon-notext ui-icon-search"]</td>
   <td></td>
 </tr>
 <tr>

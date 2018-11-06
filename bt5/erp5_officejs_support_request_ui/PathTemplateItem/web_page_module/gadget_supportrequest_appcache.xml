@@ -112,14 +112,13 @@
         <item>
             <key> <string>text_content</string> </key>
             <value> <string>CACHE MANIFEST\n
-# v1.0.2\n
+# v1.0.5\n
 CACHE:\n
 font-awesome/font-awesome-webfont.woff2\n
 echarts-all.js\n
 erp5_launcher_nojqm.js\n
 erp5_officejs_support_request_ui/\n
 favicon.ico\n
-gadget_ckeditor.js\n
 gadget_erp5_editor_panel.html\n
 gadget_erp5_editor_panel.js\n
 gadget_erp5_field_datetime.html\n
@@ -153,8 +152,8 @@ gadget_erp5_page_form.js\n
 gadget_erp5_page_homepage.css\n
 gadget_erp5_page_homepage.html\n
 gadget_erp5_page_homepage.js\n
-gadget_erp5_page_list.html\n
-gadget_erp5_page_list.js\n
+gadget_supportrequest_header.html\n
+gadget_supportrequest_header.js\n
 gadget_erp5_page_supportrequest_preference.html\n
 gadget_erp5_page_supportrequest_preference.js\n
 gadget_erp5_page_support_request_fast_view_dialog.html\n
@@ -343,7 +342,7 @@ NETWORK:\n
             </item>
             <item>
                 <key> <string>serial</string> </key>
-                <value> <string>966.44322.37377.38894</string> </value>
+                <value> <string>970.3540.592.61969</string> </value>
             </item>
             <item>
                 <key> <string>state</string> </key>
@@ -361,8 +360,8 @@ NETWORK:\n
                     </tuple>
                     <state>
                       <tuple>
-                        <float>1523022776.2</float>
-                        <string>GMT+2</string>
+                        <float>1540870337.1</float>
+                        <string>GMT+9</string>
                       </tuple>
                     </state>
                   </object>

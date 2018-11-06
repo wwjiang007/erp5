@@ -110,7 +110,7 @@ class TestERP5Core(ERP5TypeTestCase, ZopeTestCase.Functional):
   def getBusinessTemplateList(self):
     """
     """
-    return ('erp5_core_proxy_field_legacy', 'erp5_base', )
+    return ('erp5_base', )
 
   def login(self, quiet=0, run=run_all_test):
     uf = self.getPortal().acl_users
@@ -236,9 +236,12 @@ class TestERP5Core(ERP5TypeTestCase, ZopeTestCase.Functional):
                             'title': 'Configure Alarms'},
                            {'title': 'Undo', 'id': 'undo'}],
                 'object': [],
-                'object_action': [{'id': 'post_query', 'title': 'Post a Query'}],
+                'object_action': [{'id': 'post_query', 'title': 'Post a Query'},
+                                  {'id': 'diff_object_action', 'title': 'Diff Object'}],
                 'object_hidden': [{'id': 'view_historical_comparison',
-                                   'title': 'View Historical Comparison'}],
+                                   'title': 'View Historical Comparison'},
+                                   {'id': 'view_historical_diff',
+                                    'title': 'View Historical Diff'}],
                 'object_jump': [{'id': 'jump_related_object', 'title': 'Related Objects'},
                                 {'id': 'jump_query', 'title': 'Queries'}],
                 'object_search': [{'title': 'Search', 'id': 'search'}],
@@ -260,8 +263,11 @@ class TestERP5Core(ERP5TypeTestCase, ZopeTestCase.Functional):
     expected = {'folder': [],
                 'global': [],
                 'object': [],
+                'object_action': [{'id': 'diff_object_action', 'title': 'Diff Object'}],
                 'object_hidden': [{'id': 'view_historical_comparison',
-                                   'title': 'View Historical Comparison'}],
+                                   'title': 'View Historical Comparison'},
+                                   {'id': 'view_historical_diff',
+                                    'title': 'View Historical Diff'}],
                 'object_jump': [{'id': 'jump_related_object', 'title': 'Related Objects'}],
                 'object_search': [{'title': 'Search', 'id': 'search'}],
                 'object_sort': [{'title': 'Sort', 'id': 'sort_on'}],
@@ -278,8 +284,11 @@ class TestERP5Core(ERP5TypeTestCase, ZopeTestCase.Functional):
     expected = {'folder': [],
                 'global': [],
                 'object': [],
+                'object_action': [{'id': 'diff_object_action', 'title': 'Diff Object'}],
                 'object_hidden': [{'id': 'view_historical_comparison',
-                                   'title': 'View Historical Comparison'}],
+                                   'title': 'View Historical Comparison'},
+                                   {'id': 'view_historical_diff',
+                                    'title': 'View Historical Diff'}],
                 'object_jump': [{'id': 'jump_related_object', 'title': 'Related Objects'}],
                 'object_search': [{'title': 'Search', 'id': 'search'}],
                 'object_sort': [{'title': 'Sort', 'id': 'sort_on'}],
@@ -661,8 +670,26 @@ class TestERP5Core(ERP5TypeTestCase, ZopeTestCase.Functional):
     self.assertEqual(response.getStatus(), 401)
     self.assertNotIn("Also, the following error occurred", str(response))
 
-def test_suite():
-  suite = unittest.TestSuite()
-  suite.addTest(unittest.makeSuite(TestERP5Core))
-  return suite
-
+  def testCategoryExport(self):
+    """
+    Check we can export categories in a spreadsheet
+    """
+    portal = self.getPortalObject()
+    category_tool = portal.portal_categories
+    base_category_id = "test_category_export"
+    if getattr(category_tool, base_category_id, None) is not None:
+      category_tool.manage_delObjects(ids=[base_category_id])
+    base_category = category_tool.newContent(portal_type="Base Category",
+                                             id=base_category_id)
+    base_category.newContent(portal_type="Category", reference="Rfoo",
+                            id="foo", codification="CFoo", title="Foo")
+    base_category.newContent(portal_type="Category", short_title="SBar",
+                             id="bar", int_index=3, description="desc", title="Bar")
+    self.tic()
+    self.portal.REQUEST.set("format", "csv")
+    self.portal.REQUEST.set("category_list", [base_category_id])
+    csv_data = category_tool.CategoryTool_exportCategory()
+    self.assertEqual("""Path,Id,Title,Short Title,Reference,Codification,Int Index,Description
+*,bar,Bar,SBar,,,3,desc
+*,foo,Foo,,Rfoo,CFoo,,
+""", csv_data)

@@ -237,8 +237,22 @@
                     <value> <string></string> </value>
                 </item>
                 <item>
+                    <key> <string>renderjs_extra</string> </key>
+                    <value>
+                      <list/>
+                    </value>
+                </item>
+                <item>
                     <key> <string>title</string> </key>
                     <value> <string>Solve Divergence</string> </value>
+                </item>
+                <item>
+                    <key> <string>validator_field_id</string> </key>
+                    <value> <string>your_dummy_validator_field_for_gadget</string> </value>
+                </item>
+                <item>
+                    <key> <string>validator_form_id</string> </key>
+                    <value> <string></string> </value>
                 </item>
               </dictionary>
             </value>

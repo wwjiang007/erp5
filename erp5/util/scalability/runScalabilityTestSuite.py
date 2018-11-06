@@ -170,6 +170,8 @@ class ScalabilityLauncher(object):
       os.makedirs(new_directory_path)
     for file_to_move in file_to_move_list:
       shutil.move(file_to_move, new_directory_path)
+    self.log("Logs were moved from %s to %s" % (
+      self.__argumentNamespace.log_path, new_directory_path))
 
   def getRunningTest(self):
     """
@@ -213,7 +215,7 @@ class ScalabilityLauncher(object):
     self.log("Instance url: %s" %self.__argumentNamespace.instance_url)
 
     error_message_set, exit_status = set(), 0
-    process_manager = ProcessManager(self.log)
+    process_manager = ProcessManager()
 
     # Get suite informations
     suite = makeSuite(self.__argumentNamespace.test_suite, self.__argumentNamespace.repo_location, self.log)
