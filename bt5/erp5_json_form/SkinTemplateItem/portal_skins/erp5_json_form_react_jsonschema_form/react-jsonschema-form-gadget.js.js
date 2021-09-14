@@ -28,18 +28,22 @@ function makeUiSchema(schema, uiSchema, visited) {
       for (const [key, value] of Object.entries(schema.properties)) {
         uiSchema[key] = {};
         if (value.default && !(value.default instanceof Object)) {
-          if (value?.type === 'string' && value.const === undefined) {
+          if (typeof(value) === 'string' && value.const === undefined) {
             uiSchema[key]['ui:placeholder'] = value.default;
           }
           if (value.const === undefined) {
             delete value.default;
           }
         }
+        if (value.const !== undefined) {
+          value.default = value.const;
+          uiSchema[key]["ui:readonly"] = true;
+        }
         // This is something used in SlapOS schemas
         if (value.textarea) {
           uiSchema[key]["ui:widget"] = "textarea"
         }
-        if (value?.type === 'object') {
+        if (typeof(value) === 'object') {
           makeUiSchema(value, uiSchema[key], visited);
         }
         for (const oneOf of value.oneOf || []) {
@@ -62,18 +66,21 @@ function makeUiSchema(schema, uiSchema, visited) {
         value: options.value,
         key: options.key,
         schema_url: options.schema,
+        readonly: options.readonly,
       });
     })
 
     .onStateChange(function (modification_dict) {
       var gadget = this;
-      if (modification_dict.schema_url) {
+      if (modification_dict.schema_url || modification_dict.value) {
         return $RefParser
-          .dereference(modification_dict.schema_url)
+          .dereference(gadget.state.schema_url)
           .then(function (schema) {
             let uiSchema = {};
+            if (gadget.state.readonly) {
+              uiSchema["ui:readonly"] = true;
+            }
             makeUiSchema(schema, uiSchema, new Set())
-            console.log('after simplification', schema, uiSchema);
 
             const log = (type) => console.log.bind(console, type);
 
@@ -94,12 +101,12 @@ function makeUiSchema(schema, uiSchema, visited) {
                   }),
                 //     onSubmit: log('submitted'),
                 onError: log('errors'),
+                liveValidate: true,
               }),
               gadget.element
             );
           });
       }
-      console.log(this.element, modification_dict);
     })
 
     .declareMethod(
@@ -113,7 +120,9 @@ function makeUiSchema(schema, uiSchema, visited) {
     )
 
     .declareMethod('checkValidity', function () {
-      // TODO
+      if (this.state.errors !== undefined) {
+        return this.state.errors.length === 0;
+      }
       return true;
     });
 })(window, rJS, RSVP, document);
