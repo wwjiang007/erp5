@@ -5,6 +5,6 @@ with context.defaultActivateParameterDict(activate_kw, placeless=True):
 if constraint_message_list:
   active_process = context.getPortalObject().restrictedTraverse(active_process)
   active_process.postActiveResult(
-    severity=0 if fixit else 1,
+    severity=1,
     summary="%s Consistency - At least one inconsistent object found" % ('Fix' if fixit else 'Check', ),
     detail=[m.message for m in constraint_message_list])
