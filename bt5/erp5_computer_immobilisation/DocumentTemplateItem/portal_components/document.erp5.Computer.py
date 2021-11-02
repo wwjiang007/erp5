@@ -28,9 +28,10 @@
 
 from AccessControl import ClassSecurityInfo
 from Products.ERP5Type import Permissions, PropertySheet
+from erp5.component.document.JSONType import JSONType
 from erp5.component.document.Machine import Machine
 
-class Computer(Machine):
+class Computer(Machine, JSONType):
   """
   This class represents a computer like personal computer, printer, router.
   """
@@ -54,4 +55,6 @@ class Computer(Machine):
                       , PropertySheet.Mapping
                       , PropertySheet.Task
                       , PropertySheet.Reference
+                      , PropertySheet.TextDocument
+                      , PropertySheet.JSONTypeConstraint
                       )
