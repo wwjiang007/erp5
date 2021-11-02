@@ -29,8 +29,9 @@
 from AccessControl import ClassSecurityInfo
 from Products.ERP5Type import Permissions, PropertySheet
 from erp5.component.document.Item import Item
+from erp5.component.document.JSONType import JSONType
 
-class ComputerPartition(Item):
+class ComputerPartition(Item, JSONType):
   """Computer partition represents usage of Computer"""
   meta_type = 'ERP5 Computer Partition'
   portal_type = 'Computer Partition'
@@ -49,4 +50,6 @@ class ComputerPartition(Item):
                       , PropertySheet.Mapping
                       , PropertySheet.Task
                       , PropertySheet.Reference
+                      , PropertySheet.TextDocument
+                      , PropertySheet.JSONTypeConstraint
                       )
